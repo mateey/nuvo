@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPRO Driver Planner</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root {
+  --bg: #0d1117; --surface: #161b22; --border: #21262d; --border2: #30363d;
+  --accent: #58a6ff; --green: #3fb950; --red: #f85149; --yellow: #d29922;
+  --purple: #a371f7; --orange: #f0883e; --pink: #db61a2;
+  --text: #c9d1d9; --muted: #8b949e;
+  --mono: 'JetBrains Mono', monospace;
+  --override: rgba(255,215,0,0.07); --override-border: #d29922;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 13px; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+/* TOP BAR */
+.topbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 7px 14px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.topbar h1 { font-size: 13px; font-weight: 700; color: #fff; white-space: nowrap; }
+.topbar h1 span { color: var(--accent); }
+.pill { display: flex; align-items: center; gap: 5px; background: var(--bg); border: 1px solid var(--border2); border-radius: 20px; padding: 3px 10px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+.pill strong { color: var(--text); font-family: var(--mono); }
+.pill.green strong { color: var(--green); }
+.pill.accent strong { color: var(--accent); }
+.topbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.btn { padding: 5px 13px; border-radius: 6px; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 11px; transition: all 0.15s; white-space: nowrap; }
+.btn-green { background: var(--green); color: #0d1117; }
+.btn-green:hover { background: #56d364; }
+.btn-outline { background: transparent; color: var(--muted); border: 1px solid var(--border2); }
+.btn-outline:hover { color: var(--text); border-color: var(--text); }
+.legend-toggle { font-size: 11px; color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.legend-toggle:hover { color: var(--text); }
+
+/* LEGEND */
+.legend-panel { display: none; background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 14px; gap: 24px; flex-wrap: wrap; font-size: 11px; flex-shrink: 0; }
+.legend-panel.open { display: flex; }
+.legend-group { display: flex; flex-direction: column; gap: 3px; }
+.legend-group-title { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.l-row { display: flex; align-items: center; gap: 6px; }
+.l-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.l-name { font-weight: 600; min-width: 68px; }
+.l-fx { color: var(--muted); }
+
+/* TABLE */
+.table-area { flex: 1; overflow: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 1060px; }
+thead th { background: var(--surface); color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; padding: 7px 7px; border-bottom: 2px solid var(--border2); white-space: nowrap; position: sticky; top: 0; z-index: 30; }
+thead th .th-hint { font-size: 9px; font-weight: 400; color: var(--border2); display: block; letter-spacing: 0; text-transform: none; margin-top: 1px; }
+td { padding: 3px 7px; border-bottom: 1px solid rgba(33,38,45,0.9); vertical-align: middle; }
+tr:hover td { background: rgba(88,166,255,0.03); }
+
+/* season header row — now editable */
+tr.s-head td { background: var(--surface); border-top: 2px solid var(--border2); border-bottom: 1px solid var(--border); padding: 0; }
+tr.s-head td:first-child { border-left: 3px solid var(--accent); }
+tr.s-head:hover td { background: var(--surface); }
+
+.s-head-inner { display: flex; align-items: center; gap: 0; width: 100%; }
+
+/* editable season name inside table header row */
+.s-head-name {
+  background: transparent; border: none; outline: none;
+  color: var(--accent); font-family: 'Inter', sans-serif;
+  font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  padding: 6px 12px; cursor: pointer; min-width: 90px; max-width: 220px;
+  border-right: 1px solid var(--border2);
+}
+.s-head-name:focus { background: rgba(88,166,255,0.06); cursor: text; border-bottom: 1px solid var(--accent); }
+
+/* training quick-set buttons inside season header */
+.s-head-trainings { display: flex; align-items: center; gap: 3px; padding: 4px 10px; border-right: 1px solid var(--border2); }
+.s-head-label { font-size: 10px; color: var(--muted); font-weight: 600; margin-right: 4px; white-space: nowrap; }
+
+/* single-letter training buttons */
+.tb {
+  width: 22px; height: 22px; border-radius: 5px; border: 1px solid transparent;
+  cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s; flex-shrink: 0; color: #fff; opacity: 0.55;
+}
+.tb:hover { opacity: 1; transform: scale(1.1); }
+.tb.F { background: #58a6ff22; border-color: #58a6ff66; color: #58a6ff; }
+.tb.F:hover, .tb.F.act { background: #58a6ff; color: #000; opacity: 1; border-color: #58a6ff; }
+.tb.Y { background: #3fb95022; border-color: #3fb95066; color: #3fb950; }
+.tb.Y:hover, .tb.Y.act { background: #3fb950; color: #000; opacity: 1; border-color: #3fb950; }
+.tb.R { background: #f0883e22; border-color: #f0883e66; color: #f0883e; }
+.tb.R:hover, .tb.R.act { background: #f0883e; color: #000; opacity: 1; border-color: #f0883e; }
+.tb.T { background: #a371f722; border-color: #a371f766; color: #a371f7; }
+.tb.T:hover, .tb.T.act { background: #a371f7; color: #000; opacity: 1; border-color: #a371f7; }
+.tb.P { background: #db61a222; border-color: #db61a266; color: #db61a2; }
+.tb.P:hover, .tb.P.act { background: #db61a2; color: #000; opacity: 1; border-color: #db61a2; }
+.tb.N { background: #d2992222; border-color: #d2992266; color: #d29922; }
+.tb.N:hover, .tb.N.act { background: #d29922; color: #000; opacity: 1; border-color: #d29922; }
+
+/* test toggle in season header */
+.s-head-test { display: flex; align-items: center; gap: 6px; padding: 4px 12px; }
+.test-all-btn { display: flex; align-items: center; gap: 4px; cursor: pointer; background: var(--surface); border: 1px solid var(--border2); border-radius: 5px; padding: 2px 8px; font-size: 11px; color: var(--muted); font-family: 'Inter', sans-serif; font-weight: 600; white-space: nowrap; transition: all 0.15s; }
+.test-all-btn:hover { border-color: var(--green); color: var(--green); }
+.test-all-btn.active { background: rgba(63,185,80,0.12); border-color: var(--green); color: var(--green); }
+.mini-box { width: 20px; height: 11px; background: var(--border2); border-radius: 6px; position: relative; transition: background 0.2s; flex-shrink: 0; }
+.mini-box::after { content: ''; position: absolute; top: 1px; left: 1px; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); transition: all 0.2s; }
+.test-all-btn.active .mini-box { background: rgba(63,185,80,0.3); }
+.test-all-btn.active .mini-box::after { left: 10px; background: var(--green); }
+
+/* row training buttons (single-letter, inline) */
+.row-tb { display: flex; gap: 2px; }
+.rtb {
+  width: 20px; height: 20px; border-radius: 4px; border: 1px solid transparent;
+  cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 10px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.1s; flex-shrink: 0; opacity: 0.4;
+}
+.rtb:hover { opacity: 0.85; }
+.rtb.F { background: #58a6ff22; color: #58a6ff; border-color: #58a6ff44; }
+.rtb.F.act { background: #58a6ff; color: #000; opacity: 1; border-color: #58a6ff; }
+.rtb.Y { background: #3fb95022; color: #3fb950; border-color: #3fb95044; }
+.rtb.Y.act { background: #3fb950; color: #000; opacity: 1; border-color: #3fb950; }
+.rtb.R { background: #f0883e22; color: #f0883e; border-color: #f0883e44; }
+.rtb.R.act { background: #f0883e; color: #000; opacity: 1; border-color: #f0883e; }
+.rtb.T { background: #a371f722; color: #a371f7; border-color: #a371f744; }
+.rtb.T.act { background: #a371f7; color: #000; opacity: 1; border-color: #a371f7; }
+.rtb.P { background: #db61a222; color: #db61a2; border-color: #db61a244; }
+.rtb.P.act { background: #db61a2; color: #000; opacity: 1; border-color: #db61a2; }
+.rtb.N { background: #d2992222; color: #d29922; border-color: #d2992244; }
+.rtb.N.act { background: #d29922; color: #000; opacity: 1; border-color: #d29922; }
+
+/* R01 propagation hint */
+tr.is-r01 td { background: rgba(88,166,255,0.025); }
+
+/* test toggle in data rows */
+.test-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; }
+.test-toggle input { display: none; }
+.test-box { width: 26px; height: 14px; background: var(--border2); border-radius: 7px; position: relative; transition: background 0.2s; }
+.test-box::after { content: ''; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); transition: all 0.2s; }
+.test-toggle input:checked + .test-box { background: rgba(63,185,80,0.3); }
+.test-toggle input:checked + .test-box::after { left: 14px; background: var(--green); }
+
+.laps-in { width: 42px; background: var(--bg); border: 1px solid var(--border2); border-radius: 5px; color: var(--text); font-family: var(--mono); font-size: 11px; padding: 2px 4px; outline: none; }
+.laps-in:focus { border-color: var(--green); }
+
+.pos-sel { background: var(--bg); border: 1px solid var(--border2); border-radius: 5px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 11px; padding: 2px 4px; outline: none; cursor: pointer; width: 54px; }
+.pos-sel:focus { border-color: var(--yellow); }
+
+/* stat cells */
+.stat-cell { position: relative; cursor: pointer; border-radius: 4px; transition: background 0.1s; min-width: 42px; }
+.stat-cell:hover { background: rgba(88,166,255,0.1); }
+.stat-val { font-family: var(--mono); font-size: 11px; display: block; padding: 2px 4px; }
+.stat-val.up   { color: var(--green); }
+.stat-val.down { color: var(--red); }
+.stat-val.nc   { color: var(--muted); }
+.stat-val.ov   { color: var(--yellow); font-weight: 600; }
+.stat-input { width: 54px; background: var(--surface); border: 1px solid var(--accent); border-radius: 4px; color: #fff; font-family: var(--mono); font-size: 11px; padding: 2px 4px; outline: none; position: absolute; top: 0; left: 0; z-index: 20; }
+
+.oa-cell { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--accent); }
+.delta-cell { font-family: var(--mono); font-size: 10px; }
+.delta-cell.up { color: var(--green); } .delta-cell.down { color: var(--red); } .delta-cell.nc { color: var(--border2); }
+
+.agr-badge { display: inline-block; font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 1px 5px; border-radius: 10px; }
+.agr-badge.neg  { background: rgba(63,185,80,0.15);  color: var(--green); }
+.agr-badge.pos  { background: rgba(248,81,73,0.15);  color: var(--red); }
+.agr-badge.zero { background: rgba(139,148,158,0.15);color: var(--muted); }
+
+.add-row td { padding: 10px 8px; border-top: 2px dashed var(--border2); background: var(--bg); }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <h1>GPRO <span>Driver</span> Planner</h1>
+  <div class="pill">Races <strong id="hp-races">—</strong></div>
+  <div class="pill accent">Start OA <strong id="hp-start">—</strong></div>
+  <div class="pill accent">End OA <strong id="hp-end">—</strong></div>
+  <div class="pill green">Total Gain <strong id="hp-gain">—</strong></div>
+  <div class="topbar-right">
+    <span class="legend-toggle" onclick="toggleLegend()">📖 Legend</span>
+    <button class="btn btn-outline" onclick="resetAll()">✕ Reset All</button>
+    <button class="btn btn-green" onclick="addSeason()">+ Add Season</button>
+  </div>
+</div>
+
+<!-- LEGEND -->
+<div class="legend-panel" id="legend">
+  <div class="legend-group">
+    <div class="legend-group-title">Training (letter)</div>
+    <div class="l-row"><div class="l-dot" style="background:#58a6ff"></div><span class="l-name"><b>F</b> Fitness</span><span class="l-fx">STA +2 &nbsp; MOT −8 &nbsp; KG −1</span></div>
+    <div class="l-row"><div class="l-dot" style="background:#3fb950"></div><span class="l-name"><b>Y</b> Yoga</span><span class="l-fx">CONC +5 &nbsp; AGR −2 &nbsp; STA −2 &nbsp; MOT +7</span></div>
+    <div class="l-row"><div class="l-dot" style="background:#f0883e"></div><span class="l-name"><b>R</b> RP</span><span class="l-fx">CONC −1 &nbsp; CHA +10</span></div>
+    <div class="l-row"><div class="l-dot" style="background:#a371f7"></div><span class="l-name"><b>T</b> Technical</span><span class="l-fx">TI +5</span></div>
+    <div class="l-row"><div class="l-dot" style="background:#db61a2"></div><span class="l-name"><b>P</b> Psych</span><span class="l-fx">MOT +14</span></div>
+    <div class="l-row"><div class="l-dot" style="background:#d29922"></div><span class="l-name"><b>N</b> Ninja</span><span class="l-fx">CONC +1 &nbsp; AGR +1</span></div>
+  </div>
+  <div class="legend-group">
+    <div class="legend-group-title">Test ON bonuses</div>
+    <div class="l-row"><span class="l-fx">TI — gain × (laps/100) × 0.35, scales with level</span></div>
+    <div class="l-row"><span class="l-fx">STA — gain × (laps/100) × 0.5, scales with level</span></div>
+    <div class="l-row"><span class="l-fx">EXP — always from race, test doesn't affect it</span></div>
+  </div>
+  <div class="legend-group">
+    <div class="legend-group-title">AGR from position (EXP &lt; 250)</div>
+    <div class="l-row"><span class="l-fx">1–5 = <b style="color:var(--green)">−2</b> &nbsp; 6–12 = <b style="color:var(--green)">−1</b> &nbsp; 13–25 = 0 &nbsp; 26–32 = <b style="color:var(--red)">+1</b> &nbsp; 33–39 = <b style="color:var(--red)">+2</b> &nbsp; 40 = <b style="color:var(--red)">+3</b></span></div>
+    <div class="legend-group-title" style="margin-top:6px">AGR from position (EXP ≥ 250)</div>
+    <div class="l-row"><span class="l-fx">1–5 = <b style="color:var(--green)">−3</b> &nbsp; 6–12 = <b style="color:var(--green)">−2</b> &nbsp; 13–25 = <b style="color:var(--green)">−1</b> &nbsp; 26–32 = 0 &nbsp; 33–39 = <b style="color:var(--red)">+1</b> &nbsp; 40 = <b style="color:var(--red)">+2</b></span></div>
+  </div>
+  <div class="legend-group">
+    <div class="legend-group-title">Tips</div>
+    <div class="l-row"><span class="l-fx">R01 of each season sets default for all 17 races.</span></div>
+    <div class="l-row"><span class="l-fx">Click any stat cell to override → Enter to save.</span></div>
+    <div class="l-row"><span class="l-fx"><span style="color:var(--yellow)">■</span> Yellow = manual override. Click again to clear.</span></div>
+    <div class="l-row"><span class="l-fx">KG: green = lighter (good). AGR: green = higher.</span></div>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="table-area">
+<table>
+  <thead>
+    <tr>
+      <th style="width:28px">#</th>
+      <th style="width:148px">Training</th>
+      <th style="width:38px">Test</th>
+      <th style="width:40px">Laps</th>
+      <th style="width:54px">Pos</th>
+      <th style="width:46px">AGR Δ</th>
+      <th style="width:46px">CONC</th>
+      <th style="width:42px">TAL</th>
+      <th style="width:42px">AGR</th>
+      <th style="width:46px">EXP</th>
+      <th style="width:46px">TI</th>
+      <th style="width:46px">STA</th>
+      <th style="width:46px">CHA</th>
+      <th style="width:36px">KG</th>
+      <th style="width:66px">Overall</th>
+      <th style="width:50px">Δ OA</th>
+    </tr>
+  </thead>
+  <tbody id="plan-body"></tbody>
+</table>
+</div>
+
+<script>
+// ── CONSTANTS ──
+const FX = {
+  Fitness:   { CONC:0,  AGR:0,  STA:2,  CHA:0,  MOT:-8, KG:-1 },
+  Yoga:      { CONC:5,  AGR:-2, STA:-2, CHA:0,  MOT:7,  KG:0  },
+  RP:        { CONC:-1, AGR:0,  STA:0,  CHA:10, MOT:0,  KG:0  },
+  Technical: { CONC:0,  AGR:0,  STA:0,  CHA:0,  MOT:0,  KG:0  },
+  Psych:     { CONC:0,  AGR:0,  STA:0,  CHA:0,  MOT:14, KG:0  },
+  Ninja:     { CONC:1,  AGR:1,  STA:0,  CHA:0,  MOT:0,  KG:0  },
+};
+// letter → training name
+const T_LETTER = { F:'Fitness', Y:'Yoga', R:'RP', T:'Technical', P:'Psych', N:'Ninja' };
+const LETTERS = ['F','Y','R','T','P','N'];
+const CHA_PER_RACE = 0.25;
+const RPB = 17; // races per season
+const STATS = ['CONC','TAL','AGR','EXP','TI','STA','CHA','KG'];
+
+// Color logic per stat: true = up is good (green), false = up is bad (red), null = neutral
+const STAT_UP_GOOD = { CONC:true, TAL:true, AGR:true, EXP:true, TI:true, STA:true, CHA:true, KG:false };
+
+function agrFromPos(pos, exp) {
+  return exp < 250
+    ? (pos<=5?-2:pos<=12?-1:pos<=25?0:pos<=32?1:pos<=39?2:3)
+    : (pos<=5?-3:pos<=12?-2:pos<=25?-1:pos<=32?0:pos<=39?1:2);
+}
+function tiGain(ti, laps)   { const g=ti<110?7:ti<130?6:ti<146?5:ti<165?4:ti<200?3:ti<220?2:1; return (laps/100)*g*0.35; }
+function expGain(exp)        { return exp<150?1.5:exp<200?1.25:exp<240?1.0:0.63; }
+function staGain(sta, laps)  { const g=sta<100?7:sta<145?5:sta<165?4:sta<200?3:sta<220?2:1; return (laps/100)*g*0.5; }
+function calcOA(s) {
+  const c=Math.min(s.CONC,250),t=Math.min(s.TAL,250),a=Math.min(s.AGR,250),
+        e=Math.min(s.EXP,250),ti=Math.min(s.TI,250),st=Math.min(s.STA,250),ch=Math.min(s.CHA,250);
+  return Math.max(0,(c*0.17+t*0.17+a*0.15+e*0.13+ti*0.13+st*0.13+ch*0.12)*(1-(Math.max(s.KG,50)-50)*0.003));
+}
+
+// ── STATE ──
+let rows = [];
+let seasonNames = {};
+
+function emptyRow(season, race) {
+  return { season, race, training:'Fitness', test:true, laps:100, pos:null, overrides:{}, after:{}, oa:0, delta:0, agrDelta:0 };
+}
+
+// Get R01 of a season (index of first row)
+function seasonR01(sn) { return rows.findIndex(r => r.season === sn && r.race === 1); }
+
+window.onload = () => {
+  for (let s=1; s<=3; s++) {
+    seasonNames[s] = `Season ${s}`;
+    for (let r=1; r<=RPB; r++) rows.push(emptyRow(s,r));
+  }
+  recalc();
+};
+
+// ── PROPAGATION: R01 → rest of season ──
+// When R01's training, test, laps, or pos changes, apply to all rows in season
+// UNLESS the individual row has been explicitly overridden (we track per-row "locked" fields)
+// We use a simple approach: each row has a `lockedFields` set for training/test/laps/pos
+// If not locked, inherit from R01 on recalc.
+
+function propagateR01(sn) {
+  const r01idx = seasonR01(sn);
+  if (r01idx < 0) return;
+  const r01 = rows[r01idx];
+  for (let i = r01idx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (row.season !== sn) break;
+    if (!row.trainingLocked)  row.training = r01.training;
+    if (!row.testLocked)      row.test     = r01.test;
+    if (!row.lapsLocked)      row.laps     = r01.laps;
+    if (!row.posLocked)       row.pos      = r01.pos;
+  }
+}
+
+// ── RECALC ──
+function recalc() {
+  // First propagate R01 defaults for each season
+  [...new Set(rows.map(r => r.season))].forEach(propagateR01);
+
+  let s = {
+    CONC: rows[0]?.overrides.CONC ?? 0, TAL: rows[0]?.overrides.TAL ?? 0,
+    AGR:  rows[0]?.overrides.AGR  ?? 0, EXP: rows[0]?.overrides.EXP ?? 0,
+    TI:   rows[0]?.overrides.TI   ?? 0, STA: rows[0]?.overrides.STA ?? 0,
+    CHA:  rows[0]?.overrides.CHA  ?? 0, KG:  rows[0]?.overrides.KG  ?? 70,
+  };
+
+  let prevOA = calcOA(s);
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+
+    if (i === 0) {
+      STATS.forEach(k => { if (row.overrides[k] !== undefined) s[k] = row.overrides[k]; });
+      row.after = {...s}; row.oa = calcOA(s); row.delta = 0; row.agrDelta = 0;
+      prevOA = row.oa; continue;
+    }
+
+    const locked = {};
+    STATS.forEach(k => { if (row.overrides[k] !== undefined) locked[k] = row.overrides[k]; });
+
+    const fx = FX[row.training] || {};
+    s.CONC = Math.max(0, Math.min(250, s.CONC + (fx.CONC||0)));
+    s.AGR  = Math.max(0, Math.min(250, s.AGR  + (fx.AGR||0)));
+    s.STA  = Math.min(250, s.STA + (fx.STA||0));
+    s.CHA  = Math.min(250, s.CHA + (fx.CHA||0) + CHA_PER_RACE);
+    s.KG  += (fx.KG||0);
+
+    let agrDelta = 0;
+    if (row.pos !== null) {
+      agrDelta = agrFromPos(row.pos, s.EXP);
+      s.AGR = Math.max(0, Math.min(250, s.AGR + agrDelta));
+    }
+    row.agrDelta = agrDelta;
+
+    if (row.test) {
+      s.TI  = Math.min(250, s.TI  + tiGain(s.TI, row.laps));
+      s.STA = Math.min(250, s.STA + staGain(s.STA, row.laps));
+    }
+    s.EXP = Math.min(260, s.EXP + expGain(s.EXP));
+
+    STATS.forEach(k => { if (locked[k] !== undefined) s[k] = locked[k]; });
+
+    row.after  = {...s};
+    row.oa     = calcOA(s);
+    row.delta  = row.oa - prevOA;
+    prevOA     = row.oa;
+  }
+
+  renderTable();
+  updateTopBar();
+}
+
+// ── RENDER ──
+function renderTable() {
+  const tbody = document.getElementById('plan-body');
+  let html = '';
+  let curSeason = 0;
+  let prevAfter = null;
+
+  rows.forEach((row, i) => {
+    const isR01 = row.race === 1;
+
+    // Season header row (editable name + bulk controls)
+    if (row.season !== curSeason) {
+      curSeason = row.season;
+      const sn = curSeason;
+      const name = (seasonNames[sn] || `Season ${sn}`).replace(/"/g,'&quot;');
+      const srows = rows.filter(r => r.season === sn);
+      const allTest = srows.every(r => r.test);
+
+      // Find which training R01 has for the season buttons
+      const r01 = rows.find(r => r.season === sn && r.race === 1);
+      const curT = r01 ? r01.training[0] : 'F'; // first letter
+
+      html += `<tr class="s-head">
+        <td colspan="16">
+          <div class="s-head-inner">
+            <input class="s-head-name" type="text" value="${name}"
+              onchange="renameSeason(${sn},this.value)"
+              onblur="renameSeason(${sn},this.value)"
+              onclick="this.select()"
+              title="Click to rename season">
+            <div class="s-head-trainings">
+              <span class="s-head-label">Set all:</span>
+              ${LETTERS.map(L => {
+                const tname = T_LETTER[L];
+                const isAct = r01 && r01.training === tname;
+                return `<button class="tb ${L}${isAct?' act':''}" title="${tname}" onclick="setSeasonTraining(${sn},'${tname}')">${L}</button>`;
+              }).join('')}
+            </div>
+            <div class="s-head-test">
+              <button class="test-all-btn ${allTest?'active':''}" onclick="toggleSeasonTest(${sn})">
+                <div class="mini-box"></div> Test all
+              </button>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+    }
+
+    const a = row.after;
+    const hasOv = STATS.some(k => row.overrides[k] !== undefined);
+
+    // Stat cells
+    const statCells = STATS.map(k => {
+      const v = a[k];
+      const isOv = row.overrides[k] !== undefined;
+      let cls = 'nc';
+      if (!isOv && prevAfter) {
+        const d = v - (prevAfter[k]||0);
+        if (Math.abs(d) > 0.005) {
+          const upGood = STAT_UP_GOOD[k];
+          cls = (d > 0) ? (upGood ? 'up' : 'down') : (upGood ? 'down' : 'up');
+        }
+      }
+      if (isOv) cls = 'ov';
+      const dec = (k==='EXP'||k==='TI'||k==='STA'||k==='CHA') ? 1 : 0;
+      return `<td class="stat-cell" onclick="startEdit(${i},'${k}',this)">
+        <span class="stat-val ${cls}">${(v||0).toFixed(dec)}</span>
+      </td>`;
+    }).join('');
+
+    // AGR badge
+    let agrBadge = `<span style="color:var(--border2);font-size:10px">—</span>`;
+    if (row.pos !== null) {
+      const d = row.agrDelta;
+      const bc = d < 0 ? 'neg' : d > 0 ? 'pos' : 'zero';
+      agrBadge = `<span class="agr-badge ${bc}">${d>=0?'+':''}${d}</span>`;
+    }
+
+    const dc = row.delta > 0.005 ? 'up' : row.delta < -0.005 ? 'down' : 'nc';
+    const ds = row.delta > 0 ? '+' : '';
+    const posOpts = `<option value="">—</option>${Array.from({length:40},(_,j)=>`<option value="${j+1}" ${row.pos===j+1?'selected':''}>${j+1}</option>`).join('')}`;
+
+    // Row training buttons
+    const rowBtns = LETTERS.map(L => {
+      const tname = T_LETTER[L];
+      const isAct = row.training === tname;
+      return `<button class="rtb ${L}${isAct?' act':''}" title="${tname}" onclick="setRowTraining(${i},'${tname}')">${L}</button>`;
+    }).join('');
+
+    html += `<tr class="${hasOv?'overridden':''}${isR01?' is-r01':''}">
+      <td style="font-family:var(--mono);font-size:10px;color:${isR01?'var(--accent)':'var(--muted)'};font-weight:${isR01?'700':'400'}">${row.race < 10 ? '0'+row.race : row.race}</td>
+      <td><div class="row-tb">${rowBtns}</div></td>
+      <td>
+        <label class="test-toggle">
+          <input type="checkbox" ${row.test?'checked':''} onchange="setRowTest(${i},this.checked)">
+          <div class="test-box"></div>
+        </label>
+      </td>
+      <td>${row.test?`<input class="laps-in" type="number" value="${row.laps}" min="0" max="200" onchange="setRowLaps(${i},+this.value)">`:`<span style="color:var(--border2)">—</span>`}</td>
+      <td><select class="pos-sel" onchange="setRowPos(${i},this.value===''?null:+this.value)">${posOpts}</select></td>
+      <td>${agrBadge}</td>
+      ${statCells}
+      <td class="oa-cell">${row.oa.toFixed(2)}</td>
+      <td class="delta-cell ${dc}">${i===0?'—':ds+row.delta.toFixed(2)}</td>
+    </tr>`;
+
+    prevAfter = {...a};
+  });
+
+  html += `<tr class="add-row"><td colspan="16"><button class="btn btn-green" onclick="addSeason()" style="width:auto;padding:4px 14px">+ Add Season</button></td></tr>`;
+  tbody.innerHTML = html;
+}
+
+function updateTopBar() {
+  const n = rows.length;
+  document.getElementById('hp-races').textContent = n;
+  const startOA = n ? rows[0].oa : 0;
+  const endOA   = n ? rows[n-1].oa : 0;
+  const gain    = endOA - startOA;
+  document.getElementById('hp-start').textContent = startOA.toFixed(2);
+  document.getElementById('hp-end').textContent   = endOA.toFixed(2);
+  document.getElementById('hp-gain').textContent  = (gain>=0?'+':'')+gain.toFixed(2);
+}
+
+// ── SETTERS ──
+// Row-level: sets field AND marks it as locked (won't be overwritten by R01 propagation)
+function setRowTraining(i, val) {
+  rows[i].training = val;
+  rows[i].trainingLocked = (rows[i].race !== 1); // R01 itself is never "locked from above"
+  recalc();
+}
+function setRowTest(i, val) {
+  rows[i].test = val;
+  rows[i].testLocked = (rows[i].race !== 1);
+  recalc();
+}
+function setRowLaps(i, val) {
+  rows[i].laps = val;
+  rows[i].lapsLocked = (rows[i].race !== 1);
+  recalc();
+}
+function setRowPos(i, val) {
+  rows[i].pos = val;
+  rows[i].posLocked = (rows[i].race !== 1);
+  recalc();
+}
+
+// Season-level: sets R01 + clears all locks so propagation takes effect
+function setSeasonTraining(sn, val) {
+  rows.filter(r => r.season === sn).forEach(r => { r.training = val; r.trainingLocked = false; });
+  recalc();
+}
+function toggleSeasonTest(sn) {
+  const srows = rows.filter(r => r.season === sn);
+  const allOn = srows.every(r => r.test);
+  srows.forEach(r => { r.test = !allOn; r.testLocked = false; });
+  recalc();
+}
+
+function renameSeason(sn, val) {
+  seasonNames[sn] = val.trim() || `Season ${sn}`;
+  renderTable(); updateTopBar();
+}
+
+function addSeason() {
+  const last = rows.length > 0 ? rows[rows.length-1].season : 0;
+  const sn = last + 1;
+  seasonNames[sn] = `Season ${sn}`;
+  for (let r=1; r<=RPB; r++) rows.push(emptyRow(sn, r));
+  recalc();
+}
+
+function resetAll() {
+  if (!confirm('Reset everything? All data will be lost.')) return;
+  rows = []; seasonNames = {};
+  for (let s=1; s<=3; s++) {
+    seasonNames[s] = `Season ${s}`;
+    for (let r=1; r<=RPB; r++) rows.push(emptyRow(s, r));
+  }
+  recalc();
+}
+
+// ── INLINE STAT EDITING ──
+let activeInput = null;
+function startEdit(i, k, td) {
+  if (rows[i].overrides[k] !== undefined) { delete rows[i].overrides[k]; recalc(); return; }
+  closeEdit();
+  const v = (rows[i].after[k]||0);
+  const dec = (k==='EXP'||k==='TI'||k==='STA'||k==='CHA') ? 1 : 0;
+  const inp = document.createElement('input');
+  inp.type='number'; inp.className='stat-input'; inp.value=v.toFixed(dec); inp.step=dec>0?'0.1':'1';
+  td.style.position='relative'; td.appendChild(inp); inp.focus(); inp.select();
+  activeInput = {inp, i, k};
+  inp.addEventListener('keydown', e => { if(e.key==='Enter') commitEdit(); if(e.key==='Escape') closeEdit(); });
+  inp.addEventListener('blur', () => setTimeout(commitEdit, 150));
+}
+function commitEdit() {
+  if (!activeInput) return;
+  const {inp, i, k} = activeInput; activeInput = null;
+  const v = parseFloat(inp.value);
+  if (!isNaN(v)) rows[i].overrides[k] = v;
+  recalc();
+}
+function closeEdit() {
+  if (!activeInput) return;
+  if (activeInput.inp.parentNode) activeInput.inp.parentNode.removeChild(activeInput.inp);
+  activeInput = null;
+}
+
+function toggleLegend() { document.getElementById('legend').classList.toggle('open'); }
+</script>
+</body>
+</html>
