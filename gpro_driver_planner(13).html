@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPRO Driver Planner</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root {
+  --bg: #0d1117; --surface: #161b22; --border: #21262d; --border2: #30363d;
+  --accent: #58a6ff; --green: #3fb950; --red: #f85149; --yellow: #d29922;
+  --purple: #a371f7; --orange: #f0883e; --pink: #db61a2;
+  --text: #c9d1d9; --muted: #8b949e;
+  --mono: 'JetBrains Mono', monospace;
+  --override: rgba(255,215,0,0.07); --override-border: #d29922;
+}
+body.light {
+  --bg: #f0f2f5; --surface: #ffffff; --border: #dde1e7; --border2: #c4c9d4;
+  --accent: #1a6fd4; --green: #1a7f37; --red: #c5372c; --yellow: #8a6200;
+  --purple: #5a3db5; --orange: #b84c00; --pink: #a8306e;
+  --text: #1c2333; --muted: #5a6270;
+  --override: rgba(138,98,0,0.08); --override-border: #8a6200;
+}
+
+/* Light mode overrides for better readability */
+body.light .topbar {
+  background: #1a2035;
+  border-bottom-color: #2d3555;
+}
+body.light .topbar h1 { color: #ffffff; }
+body.light .topbar .pill {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.7);
+}
+body.light .topbar .pill strong { color: #fff; }
+body.light .topbar .pill.green strong { color: #4ade80; }
+body.light .topbar .pill.accent strong { color: #7eb8ff; }
+body.light .btn-outline { color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.25); }
+body.light .btn-outline:hover { color: #fff; border-color: #fff; }
+body.light .legend-toggle { color: rgba(255,255,255,0.6); }
+body.light .legend-toggle:hover { color: #fff; }
+
+body.light table { background: #fff; }
+body.light thead th {
+  background: #f0f2f5;
+  color: #5a6270;
+  border-bottom-color: #c4c9d4;
+}
+body.light td { border-bottom-color: #eaecf0; }
+body.light tr:hover td { background: rgba(26,111,212,0.04); }
+
+body.light tr.s-head td {
+  background: #1a2035;
+  border-top-color: #2d3555;
+  border-bottom-color: #2d3555;
+}
+body.light .s-head-name { color: #7eb8ff; }
+body.light .s-head-label { color: rgba(255,255,255,0.5); }
+body.light .s-head-age-label { color: #a37fff; }
+body.light .s-head-age-in {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(163,127,255,0.4);
+  color: #c4aaff;
+}
+body.light .s-head-trainings .s-head-label { color: rgba(255,255,255,0.5); }
+body.light .test-all-btn {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.6);
+}
+body.light .test-all-btn.active { background: rgba(63,185,80,0.2); border-color: #3fb950; color: #3fb950; }
+
+body.light tr.eos-row td { background: rgba(90,61,181,0.07); border-color: rgba(90,61,181,0.2); }
+body.light .eos-label { color: #5a3db5; }
+
+body.light tr.overridden td { background: rgba(138,98,0,0.06) !important; }
+body.light tr.overridden td:first-child { border-left-color: #8a6200; }
+
+body.light .t-sel, body.light .pos-sel, body.light .laps-in,
+body.light .s-head-age-in, body.light .stat-input {
+  background: #f8f9fb;
+  border-color: #c4c9d4;
+  color: #1c2333;
+}
+body.light .t-sel:focus, body.light .pos-sel:focus { border-color: #1a6fd4; }
+
+body.light .legend-panel { background: #f8f9fb; border-bottom-color: #dde1e7; }
+body.light .l-fx { color: #5a6270; }
+
+body.light .oa-cell { color: #1a6fd4; }
+body.light .stat-val.nc { color: #5a6270; }
+
+body.light .renew-popup {
+  background: #ffffff;
+  border-color: #c4c9d4;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+body.light .renew-option:hover { background: rgba(26,111,212,0.06); }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 13px; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+/* TOP BAR */
+.topbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 7px 14px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.topbar h1 { font-size: 13px; font-weight: 700; color: #fff; white-space: nowrap; }
+.topbar h1 span { color: var(--accent); }
+.pill { display: flex; align-items: center; gap: 5px; background: var(--bg); border: 1px solid var(--border2); border-radius: 20px; padding: 3px 10px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+.pill strong { color: var(--text); font-family: var(--mono); }
+.pill.green strong { color: var(--green); }
+.pill.accent strong { color: var(--accent); }
+.topbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.btn { padding: 5px 13px; border-radius: 6px; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 11px; transition: all 0.15s; white-space: nowrap; }
+.btn-green { background: var(--green); color: #0d1117; }
+.btn-green:hover { background: #56d364; }
+.btn-outline { background: transparent; color: var(--muted); border: 1px solid var(--border2); }
+.btn-outline:hover { color: var(--text); border-color: var(--text); }
+.legend-toggle { font-size: 11px; color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.legend-toggle:hover { color: var(--text); }
+
+/* LEGEND */
+.legend-panel { display: none; background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 14px; gap: 24px; flex-wrap: wrap; font-size: 11px; flex-shrink: 0; }
+.legend-panel.open { display: flex; }
+.legend-group { display: flex; flex-direction: column; gap: 3px; }
+.legend-group-title { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.l-row { display: flex; align-items: center; gap: 6px; }
+.l-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.l-name { font-weight: 600; min-width: 68px; }
+.l-fx { color: var(--muted); }
+
+/* TABLE */
+.table-area { flex: 1; overflow: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 1060px; }
+thead th { background: var(--surface); color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; padding: 7px 7px; border-bottom: 2px solid var(--border2); white-space: nowrap; position: sticky; top: 0; z-index: 30; }
+thead th .th-hint { font-size: 9px; font-weight: 400; color: var(--border2); display: block; letter-spacing: 0; text-transform: none; margin-top: 1px; }
+td { padding: 3px 7px; border-bottom: 1px solid rgba(33,38,45,0.9); vertical-align: middle; }
+tr:hover td { background: rgba(88,166,255,0.03); }
+
+/* season header row — now editable */
+tr.s-head td { background: var(--surface); border-top: 2px solid var(--border2); border-bottom: 1px solid var(--border); padding: 0; }
+tr.s-head td:first-child { border-left: 3px solid var(--accent); }
+tr.s-head:hover td { background: var(--surface); }
+
+.s-head-inner { display: flex; align-items: center; gap: 0; width: 100%; }
+
+/* editable season name inside table header row */
+.s-head-name {
+  background: transparent; border: none; outline: none;
+  color: var(--accent); font-family: 'Inter', sans-serif;
+  font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  padding: 6px 12px; cursor: pointer; min-width: 90px; max-width: 220px;
+  border-right: 1px solid var(--border2);
+}
+.s-head-name:focus { background: rgba(88,166,255,0.06); cursor: text; border-bottom: 1px solid var(--accent); }
+
+.s-head-age-wrap {
+  display: flex; align-items: center; gap: 5px;
+  padding: 0 12px; border-right: 1px solid var(--border);
+}
+.s-head-age-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--purple); white-space: nowrap;
+}
+.s-head-age-in {
+  width: 52px; background: var(--bg);
+  border: 1px solid rgba(163,113,247,0.35); border-radius: 5px;
+  color: var(--purple); font-family: var(--mono); font-weight: 600;
+  font-size: 12px; padding: 2px 5px; outline: none; text-align: center;
+}
+.s-head-age-in:focus { border-color: var(--purple); background: rgba(163,113,247,0.08); }
+
+/* training quick-set buttons inside season header */
+.s-head-trainings { display: flex; align-items: center; gap: 3px; padding: 4px 10px; border-right: 1px solid var(--border2); }
+.s-head-label { font-size: 10px; color: var(--muted); font-weight: 600; margin-right: 4px; white-space: nowrap; }
+
+/* single-letter training buttons */
+.tb {
+  width: 22px; height: 22px; border-radius: 5px; border: 1px solid transparent;
+  cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s; flex-shrink: 0; color: #fff; opacity: 0.55;
+}
+.tb:hover { opacity: 1; transform: scale(1.1); }
+.tb.F { background: #58a6ff22; border-color: #58a6ff66; color: #58a6ff; }
+.tb.F:hover, .tb.F.act { background: #58a6ff; color: #000; opacity: 1; border-color: #58a6ff; }
+.tb.Y { background: #3fb95022; border-color: #3fb95066; color: #3fb950; }
+.tb.Y:hover, .tb.Y.act { background: #3fb950; color: #000; opacity: 1; border-color: #3fb950; }
+.tb.R { background: #f0883e22; border-color: #f0883e66; color: #f0883e; }
+.tb.R:hover, .tb.R.act { background: #f0883e; color: #000; opacity: 1; border-color: #f0883e; }
+.tb.T { background: #a371f722; border-color: #a371f766; color: #a371f7; }
+.tb.T:hover, .tb.T.act { background: #a371f7; color: #000; opacity: 1; border-color: #a371f7; }
+.tb.P { background: #db61a222; border-color: #db61a266; color: #db61a2; }
+.tb.P:hover, .tb.P.act { background: #db61a2; color: #000; opacity: 1; border-color: #db61a2; }
+.tb.N { background: #d2992222; border-color: #d2992266; color: #d29922; }
+.tb.N:hover, .tb.N.act { background: #d29922; color: #000; opacity: 1; border-color: #d29922; }
+.tb.S { background: #22d4d422; border-color: #22d4d466; color: #22d4d4; }
+.tb.S:hover, .tb.S.act { background: #22d4d4; color: #000; opacity: 1; border-color: #22d4d4; }
+
+/* test toggle in season header */
+.s-head-test { display: flex; align-items: center; gap: 6px; padding: 4px 12px; }
+.test-all-btn { display: flex; align-items: center; gap: 4px; cursor: pointer; background: var(--surface); border: 1px solid var(--border2); border-radius: 5px; padding: 2px 8px; font-size: 11px; color: var(--muted); font-family: 'Inter', sans-serif; font-weight: 600; white-space: nowrap; transition: all 0.15s; }
+.test-all-btn:hover { border-color: var(--green); color: var(--green); }
+.test-all-btn.active { background: rgba(63,185,80,0.12); border-color: var(--green); color: var(--green); }
+.mini-box { width: 20px; height: 11px; background: var(--border2); border-radius: 6px; position: relative; transition: background 0.2s; flex-shrink: 0; }
+.mini-box::after { content: ''; position: absolute; top: 1px; left: 1px; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); transition: all 0.2s; }
+.test-all-btn.active .mini-box { background: rgba(63,185,80,0.3); }
+.test-all-btn.active .mini-box::after { left: 10px; background: var(--green); }
+
+/* row training buttons (single-letter, inline) */
+.row-tb { display: flex; gap: 2px; }
+.rtb {
+  width: 20px; height: 20px; border-radius: 4px; border: 1px solid transparent;
+  cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 10px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.1s; flex-shrink: 0; opacity: 0.4;
+}
+.rtb:hover { opacity: 0.85; }
+.rtb.F { background: #58a6ff22; color: #58a6ff; border-color: #58a6ff44; }
+.rtb.F.act { background: #58a6ff; color: #000; opacity: 1; border-color: #58a6ff; }
+.rtb.Y { background: #3fb95022; color: #3fb950; border-color: #3fb95044; }
+.rtb.Y.act { background: #3fb950; color: #000; opacity: 1; border-color: #3fb950; }
+.rtb.R { background: #f0883e22; color: #f0883e; border-color: #f0883e44; }
+.rtb.R.act { background: #f0883e; color: #000; opacity: 1; border-color: #f0883e; }
+.rtb.T { background: #a371f722; color: #a371f7; border-color: #a371f744; }
+.rtb.T.act { background: #a371f7; color: #000; opacity: 1; border-color: #a371f7; }
+.rtb.P { background: #db61a222; color: #db61a2; border-color: #db61a244; }
+.rtb.P.act { background: #db61a2; color: #000; opacity: 1; border-color: #db61a2; }
+.rtb.N { background: #d2992222; color: #d29922; border-color: #d2992244; }
+.rtb.N.act { background: #d29922; color: #000; opacity: 1; border-color: #d29922; }
+.rtb.S { background: #22d4d422; color: #22d4d4; border-color: #22d4d444; }
+.rtb.S.act { background: #22d4d4; color: #000; opacity: 1; border-color: #22d4d4; }
+
+/* R01 propagation hint */
+tr.is-r01 td { background: rgba(88,166,255,0.025); }
+
+/* test toggle in data rows */
+.test-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; }
+.test-toggle input { display: none; }
+.test-box { width: 26px; height: 14px; background: var(--border2); border-radius: 7px; position: relative; transition: background 0.2s; }
+.test-box::after { content: ''; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); transition: all 0.2s; }
+.test-toggle input:checked + .test-box { background: rgba(63,185,80,0.3); }
+.test-toggle input:checked + .test-box::after { left: 14px; background: var(--green); }
+
+.laps-in { width: 54px; background: var(--bg); border: 1px solid var(--border2); border-radius: 5px; color: var(--text); font-family: var(--mono); font-size: 11px; padding: 2px 4px; outline: none; }
+.laps-in:focus { border-color: var(--green); }
+
+.pos-sel { background: var(--bg); border: 1px solid var(--border2); border-radius: 5px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 11px; padding: 2px 4px; outline: none; cursor: pointer; width: 54px; }
+.pos-sel:focus { border-color: var(--yellow); }
+
+/* stat cells */
+.stat-cell { position: relative; cursor: pointer; border-radius: 4px; transition: background 0.1s; min-width: 42px; }
+.stat-cell:hover { background: rgba(88,166,255,0.1); }
+.stat-val { font-family: var(--mono); font-size: 11px; display: block; padding: 2px 4px; }
+.stat-val.up   { color: var(--green); }
+.stat-val.down { color: var(--red); }
+.stat-val.nc   { color: var(--muted); }
+.stat-val.ov   { color: var(--yellow); font-weight: 600; }
+.stat-input { width: 54px; background: var(--surface); border: 1px solid var(--accent); border-radius: 4px; color: #fff; font-family: var(--mono); font-size: 11px; padding: 2px 4px; outline: none; position: absolute; top: 0; left: 0; z-index: 20; }
+
+.oa-cell { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--accent); }
+.delta-cell { font-family: var(--mono); font-size: 10px; }
+.delta-cell.up { color: var(--green); } .delta-cell.down { color: var(--red); } .delta-cell.nc { color: var(--border2); }
+
+.agr-badge { display: inline-block; font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 1px 5px; border-radius: 10px; }
+.agr-badge.neg  { background: rgba(248,81,73,0.15);  color: var(--red); }
+.agr-badge.pos  { background: rgba(63,185,80,0.15);  color: var(--green); }
+.agr-badge.zero { background: rgba(139,148,158,0.15);color: var(--muted); }
+
+.add-row td { padding: 10px 8px; border-top: 2px dashed var(--border2); background: var(--bg); }
+
+.renew-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px; border-radius: 3px;
+  background: rgba(63,185,80,0.15); color: var(--green);
+  font-size: 11px; font-weight: 700; cursor: pointer;
+  border: 1px solid rgba(63,185,80,0.3);
+  transition: all 0.15s; vertical-align: middle; line-height: 1;
+  user-select: none; flex-shrink: 0;
+}
+.renew-btn:hover { background: rgba(63,185,80,0.3); border-color: var(--green); }
+
+.renew-popup {
+  position: fixed; z-index: 1000;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  display: flex; flex-direction: column; gap: 4px; min-width: 160px;
+}
+.renew-popup-title {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--muted); padding: 2px 4px 6px; border-bottom: 1px solid var(--border2);
+  margin-bottom: 2px;
+}
+.renew-option {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 5px 8px; border-radius: 5px; cursor: pointer;
+  font-size: 11px; transition: background 0.1s; gap: 12px;
+}
+.renew-option:hover { background: rgba(88,166,255,0.1); }
+.renew-option .ro-races { font-family: var(--mono); font-weight: 600; color: var(--text); }
+.renew-option .ro-salary { font-family: var(--mono); font-size: 10px; color: var(--green); }
+.renew-option .ro-mult { font-size: 10px; color: var(--muted); }
+
+/* End-of-season reset row */
+tr.eos-row td {
+  background: rgba(110,64,201,0.06);
+  border-top: 1px solid rgba(163,113,247,0.25);
+  border-bottom: 1px solid rgba(163,113,247,0.15);
+  padding: 4px 7px;
+  font-size: 10px;
+}
+tr.eos-row:hover td { background: rgba(163,113,247,0.1); }
+.eos-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--purple); white-space: nowrap;
+}
+.eos-delta { font-family: var(--mono); font-size: 10px; }
+.eos-delta.neg { color: var(--red); }
+.eos-delta.pos { color: var(--green); }
+.eos-delta.nc  { color: var(--border2); }
+.eos-age { font-family: var(--mono); font-size: 10px; color: var(--purple); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <h1>GPRO <span>Driver</span> Planner</h1>
+  <div class="pill">Races <strong id="hp-races">—</strong></div>
+  <div class="pill accent">Start OA <strong id="hp-start">—</strong></div>
+  <div class="pill accent">End OA <strong id="hp-end">—</strong></div>
+  <div class="pill green">Total Gain <strong id="hp-gain">—</strong></div>
+  <div class="topbar-right">
+    <span class="legend-toggle" onclick="toggleLegend()">📖 Legend</span>
+    <button class="btn btn-outline" id="theme-btn" onclick="toggleTheme()" style="font-size:11px">☀ Light</button>
+    <button class="btn btn-outline" id="emoji-btn" onclick="toggleEmoji()" style="font-size:11px">🏋️ Icons</button>
+    <button class="btn btn-outline" onclick="recalc()" title="Re-roll all random training values" style="font-size:11px">🎲 Re-roll</button>
+    <button class="btn btn-outline" onclick="resetAll()">✕ Reset All</button>
+    <button class="btn btn-green" onclick="addSeason()">+ Add Season</button>
+  </div>
+</div>
+
+<!-- LEGEND -->
+<div class="legend-panel" id="legend">
+  <div class="legend-group">
+    <div class="legend-group-title">Training (letter)</div>
+    <div class="l-row"><div class="l-dot" style="background:#58a6ff"></div><span class="l-name"><b>F</b> Fitness</span><span class="l-fx">STA +2 &nbsp; KG −1 &nbsp; MOT −5/−10 🎲</span></div>
+    <div class="l-row"><div class="l-dot" style="background:#3fb950"></div><span class="l-name"><b>Y</b> Yoga</span><span class="l-fx">CONC +4/+8 (by level) &nbsp; AGR −2 &nbsp; STA −2</span></div>
+    <div class="l-row"><div class="l-dot" style="background:#f0883e"></div><span class="l-name"><b>R</b> RP</span><span class="l-fx">CONC −1 &nbsp; CHA +10</span></div>
+    <div class="l-row"><div class="l-dot" style="background:#a371f7"></div><span class="l-name"><b>T</b> Technical</span><span class="l-fx">TI +5 &nbsp; EXP +1 &nbsp; MOT (168−age)×7</span></div>
+    <div class="l-row"><div class="l-dot" style="background:#db61a2"></div><span class="l-name"><b>P</b> Psych</span><span class="l-fx">MOT: &lt;50→+50, &lt;100→+40, else +30</span></div>
+    <div class="l-row"><div class="l-dot" style="background:#d29922"></div><span class="l-name"><b>N</b> Ninja</span><span class="l-fx">CONC +1 &nbsp; AGR +1/+9 (by level) 🎲</span></div>
+    <div class="l-row"><div class="l-dot" style="background:#22d4d4"></div><span class="l-name"><b>S</b> Spa Resort</span><span class="l-fx">MOT +5/+10 🎲</span></div>
+  </div>
+  <div class="legend-group">
+    <div class="legend-group-title">Test ON bonuses</div>
+    <div class="l-row"><span class="l-fx">TI — gain × (laps/100) × 0.35, scales with level</span></div>
+    <div class="l-row"><span class="l-fx">STA — gain × (laps/100) × 0.5, scales with level</span></div>
+    <div class="l-row"><span class="l-fx">EXP — always from race, test doesn't affect it</span></div>
+  </div>
+  <div class="legend-group">
+    <div class="legend-group-title">AGR from position (EXP &lt; 250)</div>
+    <div class="l-row"><span class="l-fx">1–5 = <b style="color:var(--green)">−2</b> &nbsp; 6–12 = <b style="color:var(--green)">−1</b> &nbsp; 13–25 = 0 &nbsp; 26–32 = <b style="color:var(--red)">+1</b> &nbsp; 33–39 = <b style="color:var(--red)">+2</b> &nbsp; 40 = <b style="color:var(--red)">+3</b></span></div>
+    <div class="legend-group-title" style="margin-top:6px">AGR from position (EXP ≥ 250)</div>
+    <div class="l-row"><span class="l-fx">1–5 = <b style="color:var(--green)">−3</b> &nbsp; 6–12 = <b style="color:var(--green)">−2</b> &nbsp; 13–25 = <b style="color:var(--green)">−1</b> &nbsp; 26–32 = 0 &nbsp; 33–39 = <b style="color:var(--red)">+1</b> &nbsp; 40 = <b style="color:var(--red)">+2</b></span></div>
+  </div>
+  <div class="legend-group">
+    <div class="legend-group-title">Tips</div>
+    <div class="l-row"><span class="l-fx">R01 of each season sets default for all 17 races.</span></div>
+    <div class="l-row"><span class="l-fx">Click any stat cell to override → Enter to save.</span></div>
+    <div class="l-row"><span class="l-fx"><span style="color:var(--yellow)">■</span> Yellow = manual override. Click again to clear.</span></div>
+    <div class="l-row"><span class="l-fx">KG: green = lighter (good). AGR: green = higher.</span></div>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="table-area">
+<table>
+  <thead>
+    <tr>
+      <th style="width:28px">#</th>
+      <th style="width:148px">Training</th>
+      <th style="width:38px">Test</th>
+      <th style="width:58px">Laps</th>
+      <th style="width:54px">Pos</th>
+      <th style="width:46px">AGR Δ</th>
+      <th style="width:66px">OA</th>
+      <th style="width:60px">bOA<div class="th-hint">MOT=0</div></th>
+      <th style="width:46px">CONC</th>
+      <th style="width:42px">TAL</th>
+      <th style="width:42px">AGR</th>
+      <th style="width:46px">EXP</th>
+      <th style="width:46px">TI</th>
+      <th style="width:46px">STA</th>
+      <th style="width:46px">CHA</th>
+      <th style="width:42px">MOT</th>
+      <th style="width:36px">KG</th>
+      <th style="width:92px">Salary<div class="th-hint">$</div></th>
+      <th style="width:72px">Contract<div class="th-hint">races left</div></th>
+      <th style="width:50px">Δ OA</th>
+    </tr>
+  </thead>
+  <tbody id="plan-body"></tbody>
+</table>
+</div>
+
+<script>
+// ── CONSTANTS ──
+// FX now contains only deterministic effects.
+// Range/random effects are handled in applyTrainingFX() below.
+const FX = {
+  Fitness:   { STA:2,  KG:-1 },
+  Yoga:      { AGR:-2, STA:-2 },
+  RP:        { CONC:-1, CHA:10 },
+  Technical: { TI:5,  EXP_BONUS:1 },
+  Psych:     {},
+  Ninja:     { CONC:1 },
+  SpaResort: {},
+};
+const T_LETTER = { F:'Fitness', Y:'Yoga', R:'RP', T:'Technical', P:'Psych', N:'Ninja', S:'SpaResort' };
+const T_EMOJI = { F:'🏋️', Y:'🧘', R:'🎤', T:'🔧', P:'🧠', N:'🥷', S:'🌊' };
+let useEmoji = false;
+const LETTERS = ['F','Y','R','T','P','N','S'];
+
+function rand(min, max) { return min + Math.random() * (max - min); }
+function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
+
+// Returns {CONC, AGR, STA, CHA, MOT, KG, EXP_BONUS} delta for a training given current stats
+function applyTrainingFX(training, s, age) {
+  const d = { CONC:0, AGR:0, STA:0, CHA:0, MOT:0, KG:0, TI:0, EXP_BONUS:0 };
+  if (!training) return d;
+  switch(training) {
+    case 'Fitness':
+      d.STA = 2;
+      d.KG  = -1;
+      d.MOT = -randInt(5, 10);
+      break;
+    case 'Yoga':
+      d.AGR = -2;
+      d.STA = -2;
+      d.CONC = s.CONC < 140 ? 8
+             : s.CONC < 160 ? 7
+             : s.CONC < 180 ? 6
+             : s.CONC < 200 ? 5 : 4;
+      break;
+    case 'RP':
+      d.CONC = -1;
+      d.CHA  = 10;
+      break;
+    case 'Technical':
+      d.TI  = 5;
+      d.EXP_BONUS = 1;
+      d.MOT = Math.round((168 - age) * 7);
+      break;
+    case 'Psych':
+      d.MOT = s.MOT < 50  ? 50
+            : s.MOT < 100 ? 40 : 30;
+      break;
+    case 'Ninja':
+      d.CONC = 1;
+      d.AGR  = s.AGR <= 50  ? randInt(6, 9)
+             : s.AGR <= 100 ? randInt(4, 7)
+             : s.AGR <= 150 ? randInt(3, 4)
+             : s.AGR <= 200 ? randInt(2, 3) : 1;
+      break;
+    case 'SpaResort':
+      d.MOT = randInt(5, 10);
+      break;
+  }
+  return d;
+}
+const CHA_PER_RACE = 0.25;
+const RPB = 17; // races per season
+const STATS = ['CONC','TAL','AGR','EXP','TI','STA','CHA','MOT','KG'];
+
+// Color logic per stat: true = up is good (green), false = up is bad (red), null = neutral
+const STAT_UP_GOOD = { CONC:true, TAL:true, AGR:true, EXP:true, TI:true, STA:true, CHA:true, MOT:true, KG:false };
+
+function agrFromPos(pos, exp) {
+  return exp < 250
+    ? (pos<=5?-2:pos<=12?-1:pos<=25?0:pos<=32?1:pos<=39?2:3)
+    : (pos<=5?-3:pos<=12?-2:pos<=25?-1:pos<=32?0:pos<=39?1:2);
+}
+// TI gain lookup tables
+const TI_COLS = [3, 10, 17, 24, 31, 38, 45, 52, 59, 66, 73, 80, 87, 94, 101, 108, 115, 122, 129, 136, 143, 150, 157, 164, 171, 178, 185, 192, 199, 206, 213, 220, 227, 234, 241, 248];
+const TI_NO_TEST_TBL = {
+  17: [1.13, 1.14, 1.15, 1.15, 1.16, 1.17, 1.18, 1.19, 1.19, 1.2, 1.21, 1.21, 1.22, 1.22, 1.23, 1.23, 1.23, 1.24, 1.24, 1.24, 1.24, 1.24, 1.24, 1.24, 1.24, 1.24, 1.24, 1.24, 1.23, 1.23, 1.23, 1.23, 1.22, 1.22, 1.21, 1.2],
+  18: [1.06, 1.07, 1.08, 1.09, 1.1, 1.11, 1.11, 1.12, 1.13, 1.14, 1.14, 1.15, 1.15, 1.16, 1.16, 1.16, 1.17, 1.17, 1.17, 1.17, 1.18, 1.18, 1.17, 1.17, 1.17, 1.17, 1.17, 1.17, 1.17, 1.16, 1.16, 1.15, 1.15, 1.14, 1.13],
+  19: [0.99, 1.0, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.06, 1.07, 1.07, 1.08, 1.09, 1.09, 1.09, 1.1, 1.1, 1.1, 1.11, 1.11, 1.11, 1.11, 1.11, 1.11, 1.11, 1.11, 1.11, 1.11, 1.1, 1.1, 1.1, 1.1, 1.09, 1.08, 1.07],
+  20: [0.93, 0.94, 0.95, 0.96, 0.97, 0.97, 0.98, 0.99, 1.0, 1.0, 1.01, 1.01, 1.02, 1.02, 1.03, 1.03, 1.03, 1.04, 1.04, 1.04, 1.04, 1.04, 1.04, 1.04, 1.04, 1.04, 1.04, 1.03, 1.03, 1.02, 1.02, 1.01, 1.01, 1.0, 1.0],
+  21: [0.86, 0.87, 0.88, 0.89, 0.9, 0.91, 0.92, 0.92, 0.93, 0.94, 0.94, 0.95, 0.95, 0.96, 0.96, 0.97, 0.97, 0.97, 0.97, 0.97, 0.98, 0.98, 0.98, 0.98, 0.97, 0.97, 0.97, 0.97, 0.96, 0.96, 0.96, 0.95, 0.95, 0.94, 0.93],
+  22: [0.79, 0.8, 0.81, 0.82, 0.83, 0.84, 0.85, 0.86, 0.86, 0.87, 0.88, 0.88, 0.89, 0.89, 0.9, 0.9, 0.9, 0.91, 0.91, 0.91, 0.91, 0.91, 0.91, 0.91, 0.91, 0.91, 0.91, 0.9, 0.9, 0.89, 0.88, 0.89, 0.89, 0.88, 0.87],
+  23: [0.73, 0.74, 0.75, 0.76, 0.77, 0.78, 0.78, 0.79, 0.8, 0.8, 0.81, 0.82, 0.82, 0.83, 0.83, 0.83, 0.84, 0.84, 0.84, 0.84, 0.84, 0.84, 0.84, 0.84, 0.84, 0.84, 0.84, 0.84, 0.83, 0.83, 0.82, 0.82, 0.81, 0.8],
+  24: [0.66, 0.67, 0.68, 0.69, 0.7, 0.71, 0.72, 0.72, 0.73, 0.74, 0.74, 0.75, 0.75, 0.76, 0.76, 0.77, 0.77, 0.77, 0.77, 0.77, 0.78, 0.78, 0.78, 0.78, 0.78, 0.78, 0.77, 0.77, 0.77, 0.76, 0.76, 0.75, 0.75, 0.74],
+  25: [0.6, 0.61, 0.62, 0.63, 0.64, 0.65, 0.65, 0.66, 0.67, 0.67, 0.68, 0.68, 0.69, 0.69, 0.7, 0.7, 0.7, 0.71, 0.71, 0.71, 0.71, 0.71, 0.71, 0.71, 0.71, 0.71, 0.71, 0.71, 0.7, 0.7, 0.7, 0.69, 0.69, 0.68, 0.68],
+  26: [0.53, 0.54, 0.55, 0.56, 0.57, 0.58, 0.58, 0.59, 0.6, 0.61, 0.61, 0.62, 0.62, 0.63, 0.63, 0.63, 0.64, 0.64, 0.64, 0.64, 0.65, 0.65, 0.65, 0.65, 0.64, 0.64, 0.64, 0.64, 0.64, 0.63, 0.63, 0.63, 0.62, 0.61, 0.6],
+  27: [0.46, 0.47, 0.48, 0.49, 0.5, 0.51, 0.52, 0.53, 0.53, 0.54, 0.55, 0.55, 0.56, 0.56, 0.57, 0.57, 0.57, 0.57, 0.58, 0.58, 0.58, 0.58, 0.58, 0.58, 0.58, 0.58, 0.58, 0.57, 0.57, 0.57, 0.56, 0.56, 0.55, 0.54],
+  28: [0.4, 0.41, 0.42, 0.43, 0.44, 0.44, 0.45, 0.46, 0.47, 0.47, 0.48, 0.48, 0.49, 0.49, 0.5, 0.5, 0.51, 0.51, 0.51, 0.51, 0.51, 0.51, 0.51, 0.51, 0.51, 0.51, 0.51, 0.51, 0.5, 0.5, 0.5, 0.49, 0.48, 0.47],
+  29: [0.33, 0.34, 0.35, 0.36, 0.37, 0.38, 0.39, 0.39, 0.4, 0.41, 0.41, 0.42, 0.42, 0.43, 0.43, 0.44, 0.44, 0.44, 0.44, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.44, 0.44, 0.44, 0.43, 0.43, 0.42, 0.41, 0.41],
+  30: [0.26, 0.28, 0.29, 0.29, 0.3, 0.31, 0.32, 0.33, 0.33, 0.34, 0.35, 0.35, 0.36, 0.36, 0.37, 0.37, 0.37, 0.37, 0.38, 0.38, 0.38, 0.38, 0.38, 0.38, 0.38, 0.38, 0.38, 0.37, 0.37, 0.36, 0.35, 0.35, 0.34],
+  31: [0.2, 0.21, 0.22, 0.23, 0.24, 0.25, 0.25, 0.26, 0.27, 0.27, 0.28, 0.29, 0.29, 0.3, 0.3, 0.3, 0.31, 0.31, 0.31, 0.31, 0.31, 0.31, 0.31, 0.31, 0.31, 0.31, 0.31, 0.3, 0.3, 0.29, 0.29, 0.28, 0.27],
+  32: [0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.19, 0.2, 0.21, 0.21, 0.22, 0.22, 0.23, 0.23, 0.24, 0.24, 0.24, 0.24, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.24, 0.24, 0.23, 0.23, 0.22, 0.21],
+  33: [0.07, 0.08, 0.09, 0.1, 0.1, 0.11, 0.12, 0.13, 0.14, 0.14, 0.15, 0.15, 0.16, 0.16, 0.17, 0.17, 0.17, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.17, 0.17, 0.17, 0.16, 0.15, 0.14],
+  34: [0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.06, 0.07, 0.08, 0.08, 0.09, 0.09, 0.1, 0.1, 0.11, 0.11, 0.11, 0.11, 0.12, 0.12, 0.12, 0.12, 0.12, 0.11, 0.11, 0.11, 0.11, 0.1, 0.1, 0.09, 0.08, 0.07],
+  35: [-0.07, -0.06, -0.05, -0.04, -0.03, -0.02, -0.01, 0.0, 0.0, 0.01, 0.02, 0.02, 0.03, 0.03, 0.04, 0.04, 0.04, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.04, 0.04, 0.04, 0.04, 0.03, 0.03, 0.03, 0.01, 0.0],
+  36: [-0.13, -0.12, -0.11, -0.1, -0.09, -0.09, -0.08, -0.07, -0.06, -0.06, -0.05, -0.04, -0.04, -0.04, -0.03, -0.03, -0.02, -0.02, -0.02, -0.02, -0.02, -0.02, -0.02, -0.02, -0.02, -0.02, -0.03, -0.03, -0.03, -0.04, -0.05, -0.06],
+};
+const TI_WITH_TEST_TBL = {
+  17: [2.54, 2.52, 2.5, 2.49, 2.47, 2.46, 2.44, 2.43, 2.41, 2.4, 2.39, 2.38, 2.37, 2.36, 2.35, 2.34, 2.33, 2.33, 2.32, 2.31, 2.31, 2.3, 2.3, 2.3, 2.29, 2.29, 2.29, 2.29, 2.29, 2.29, 2.29, 2.29, 2.3, 2.3, 2.3, 2.31],
+  18: [2.46, 2.45, 2.43, 2.41, 2.4, 2.38, 2.37, 2.35, 2.34, 2.33, 2.32, 2.31, 2.3, 2.29, 2.28, 2.27, 2.26, 2.25, 2.25, 2.24, 2.24, 2.23, 2.23, 2.22, 2.22, 2.22, 2.22, 2.22, 2.22, 2.22, 2.22, 2.22, 2.22, 2.23, 2.23],
+  19: [2.39, 2.37, 2.36, 2.34, 2.33, 2.31, 2.3, 2.28, 2.27, 2.26, 2.25, 2.23, 2.22, 2.21, 2.21, 2.2, 2.19, 2.18, 2.18, 2.17, 2.17, 2.16, 2.16, 2.15, 2.15, 2.15, 2.15, 2.15, 2.15, 2.15, 2.15, 2.15, 2.15, 2.15, 2.16, 2.16],
+  20: [2.32, 2.3, 2.28, 2.27, 2.25, 2.24, 2.22, 2.21, 2.2, 2.18, 2.17, 2.16, 2.15, 2.14, 2.13, 2.12, 2.12, 2.11, 2.1, 2.1, 2.09, 2.09, 2.08, 2.08, 2.08, 2.08, 2.07, 2.07, 2.07, 2.07, 2.07, 2.08, 2.08, 2.08, 2.09],
+  21: [2.25, 2.23, 2.21, 2.2, 2.18, 2.17, 2.15, 2.14, 2.12, 2.11, 2.1, 2.08, 2.07, 2.07, 2.06, 2.05, 2.04, 2.04, 2.03, 2.02, 2.02, 2.01, 2.01, 2.01, 2.0, 2.0, 2.0, 2.0, 2.0, 2.01, 2.01, 2.01, 2.01, 2.02],
+  22: [2.17, 2.16, 2.14, 2.12, 2.11, 2.09, 2.08, 2.07, 2.05, 2.04, 2.03, 2.02, 2.01, 2.0, 1.99, 1.98, 1.97, 1.96, 1.96, 1.95, 1.95, 1.94, 1.94, 1.93, 1.93, 1.93, 1.93, 1.93, 1.93, 1.94, 1.94, 1.94, 1.94, 1.95],
+  23: [2.1, 2.08, 2.07, 2.05, 2.04, 2.02, 2.01, 1.99, 1.98, 1.97, 1.96, 1.95, 1.93, 1.93, 1.92, 1.91, 1.9, 1.89, 1.89, 1.88, 1.87, 1.87, 1.86, 1.86, 1.86, 1.86, 1.86, 1.86, 1.86, 1.87, 1.87, 1.87],
+  24: [2.03, 2.01, 1.99, 1.98, 1.96, 1.95, 1.93, 1.92, 1.91, 1.9, 1.88, 1.87, 1.86, 1.85, 1.84, 1.84, 1.83, 1.82, 1.81, 1.81, 1.8, 1.8, 1.79, 1.79, 1.79, 1.79, 1.78, 1.78, 1.79, 1.79, 1.79, 1.8],
+  25: [1.96, 1.94, 1.92, 1.91, 1.89, 1.88, 1.86, 1.85, 1.84, 1.82, 1.81, 1.8, 1.79, 1.78, 1.77, 1.76, 1.75, 1.75, 1.74, 1.74, 1.73, 1.73, 1.72, 1.72, 1.71, 1.71, 1.71, 1.71, 1.71, 1.72, 1.72],
+  26: [1.88, 1.87, 1.85, 1.83, 1.82, 1.8, 1.79, 1.78, 1.76, 1.75, 1.74, 1.73, 1.72, 1.71, 1.7, 1.69, 1.68, 1.68, 1.67, 1.66, 1.66, 1.65, 1.65, 1.64, 1.64, 1.64, 1.64, 1.64, 1.64, 1.65, 1.65, 1.66],
+  27: [1.81, 1.79, 1.78, 1.76, 1.75, 1.73, 1.72, 1.7, 1.69, 1.68, 1.67, 1.66, 1.65, 1.64, 1.63, 1.62, 1.61, 1.6, 1.6, 1.59, 1.59, 1.58, 1.58, 1.57, 1.57, 1.57, 1.57, 1.57, 1.57, 1.58, 1.58],
+  28: [1.74, 1.72, 1.71, 1.69, 1.67, 1.66, 1.64, 1.63, 1.62, 1.61, 1.59, 1.58, 1.57, 1.56, 1.55, 1.55, 1.54, 1.53, 1.52, 1.52, 1.51, 1.51, 1.5, 1.5, 1.5, 1.5, 1.49, 1.49, 1.5, 1.5, 1.51],
+  29: [1.67, 1.65, 1.63, 1.62, 1.6, 1.59, 1.57, 1.56, 1.55, 1.53, 1.52, 1.51, 1.5, 1.49, 1.48, 1.47, 1.47, 1.46, 1.45, 1.45, 1.44, 1.44, 1.43, 1.43, 1.43, 1.42, 1.42, 1.42, 1.43, 1.43, 1.44],
+  30: [1.59, 1.58, 1.56, 1.54, 1.53, 1.51, 1.5, 1.49, 1.47, 1.46, 1.45, 1.44, 1.43, 1.42, 1.41, 1.4, 1.39, 1.39, 1.38, 1.37, 1.37, 1.36, 1.36, 1.35, 1.35, 1.35, 1.35, 1.35, 1.35, 1.36, 1.37],
+  31: [1.52, 1.5, 1.49, 1.47, 1.46, 1.44, 1.43, 1.41, 1.4, 1.39, 1.38, 1.37, 1.36, 1.35, 1.34, 1.33, 1.32, 1.31, 1.31, 1.3, 1.29, 1.29, 1.28, 1.28, 1.28, 1.28, 1.28, 1.28, 1.28, 1.29, 1.29],
+  32: [1.45, 1.43, 1.42, 1.4, 1.38, 1.37, 1.35, 1.34, 1.33, 1.32, 1.3, 1.29, 1.28, 1.27, 1.26, 1.26, 1.25, 1.24, 1.23, 1.23, 1.22, 1.22, 1.21, 1.21, 1.21, 1.21, 1.21, 1.21, 1.22, 1.22],
+  33: [1.38, 1.36, 1.34, 1.33, 1.31, 1.3, 1.28, 1.27, 1.26, 1.24, 1.23, 1.22, 1.21, 1.2, 1.19, 1.18, 1.18, 1.17, 1.16, 1.16, 1.15, 1.15, 1.14, 1.14, 1.14, 1.14, 1.13, 1.13, 1.14, 1.14, 1.15],
+  34: [1.3, 1.29, 1.27, 1.25, 1.24, 1.22, 1.21, 1.2, 1.18, 1.17, 1.16, 1.15, 1.14, 1.13, 1.12, 1.11, 1.1, 1.1, 1.09, 1.08, 1.08, 1.07, 1.07, 1.06, 1.06, 1.06, 1.06, 1.06, 1.07, 1.07, 1.08],
+  35: [1.23, 1.22, 1.2, 1.18, 1.17, 1.15, 1.14, 1.12, 1.11, 1.1, 1.09, 1.08, 1.07, 1.06, 1.05, 1.04, 1.03, 1.02, 1.02, 1.01, 1.01, 1.0, 1.0, 0.99, 0.99, 0.99, 0.99, 0.99, 1.0, 1.0],
+  36: [1.16, 1.14, 1.13, 1.11, 1.09, 1.08, 1.07, 1.05, 1.04, 1.03, 1.01, 1.0, 0.99, 0.98, 0.97, 0.97, 0.96, 0.95, 0.94, 0.94, 0.93, 0.93, 0.92, 0.92, 0.92, 0.92, 0.92, 0.92, 0.91, 0.93],
+};
+
+function tiGain(ti, age, withTest) {
+  const clampedAge = Math.max(17, Math.min(36, Math.round(age || 27)));
+  const tbl = withTest ? TI_WITH_TEST_TBL : TI_NO_TEST_TBL;
+  const row = tbl[clampedAge];
+  if (!row) return 0;
+  const cols = TI_COLS;
+  const clampedTI = Math.max(cols[0], Math.min(cols[cols.length-1], ti));
+  let lo = 0;
+  for (let i = 0; i < cols.length - 1; i++) {
+    if (clampedTI >= cols[i] && clampedTI <= cols[i+1]) { lo = i; break; }
+  }
+  const hi = Math.min(lo + 1, cols.length - 1);
+  const loVal = row[lo] ?? row[row.length-1] ?? 0;
+  const hiVal = row[hi] ?? row[row.length-1] ?? 0;
+  const t = cols[lo] === cols[hi] ? 0 : (clampedTI - cols[lo]) / (cols[hi] - cols[lo]);
+  return loVal + t * (hiVal - loVal);
+}
+// EXP gain lookup tables (multipliers, from community data)
+const EXP_COLS = [3, 10, 17, 24, 31, 38, 45, 52, 59, 66, 73, 80, 87, 94, 101, 108, 115, 122, 129, 136, 143, 150, 157, 164, 171, 178, 185, 192, 199, 206, 213, 220, 227, 234, 241, 248, 255, 262, 269, 276];
+const EXP_WITH_TEST_TBL = {
+  17: [1.09, 1.12, 1.14, 1.16, 1.18, 1.19, 1.21, 1.22, 1.23, 1.24, 1.24, 1.24, 1.24, 1.24, 1.24, 1.24, 1.23, 1.23, 1.22, 1.2, 1.19, 1.17, 1.16, 1.14, 1.11, 1.09, 1.06, 1.03, 1.0, 0.97, 0.93, 0.9, 0.86, 0.81, 0.77, 0.73, 0.68, 0.63, 0.57, 0.52, 0.46],
+  18: [1.09, 1.11, 1.14, 1.16, 1.17, 1.19, 1.2, 1.22, 1.22, 1.23, 1.24, 1.24, 1.24, 1.24, 1.24, 1.23, 1.22, 1.21, 1.2, 1.19, 1.17, 1.15, 1.13, 1.11, 1.08, 1.06, 1.03, 1.0, 0.96, 0.93, 0.89, 0.85, 0.81, 0.77, 0.72, 0.67, 0.62, 0.57, 0.52, 0.46],
+  19: [1.09, 1.11, 1.13, 1.15, 1.17, 1.19, 1.2, 1.21, 1.22, 1.23, 1.23, 1.24, 1.24, 1.24, 1.23, 1.23, 1.22, 1.21, 1.2, 1.18, 1.17, 1.15, 1.13, 1.11, 1.08, 1.05, 1.02, 0.99, 0.96, 0.93, 0.89, 0.85, 0.81, 0.76, 0.72, 0.67, 0.62, 0.57, 0.51, 0.46],
+  20: [1.08, 1.11, 1.13, 1.15, 1.17, 1.18, 1.2, 1.21, 1.22, 1.23, 1.23, 1.23, 1.23, 1.23, 1.22, 1.21, 1.2, 1.19, 1.18, 1.16, 1.14, 1.12, 1.1, 1.08, 1.05, 1.02, 0.99, 0.96, 0.92, 0.88, 0.84, 0.8, 0.76, 0.71, 0.67, 0.61, 0.56, 0.51, 0.45],
+  21: [1.08, 1.1, 1.12, 1.14, 1.16, 1.18, 1.19, 1.2, 1.21, 1.22, 1.22, 1.23, 1.23, 1.23, 1.22, 1.22, 1.21, 1.2, 1.19, 1.17, 1.16, 1.14, 1.12, 1.1, 1.07, 1.05, 1.02, 0.99, 0.95, 0.92, 0.88, 0.84, 0.8, 0.75, 0.71, 0.66, 0.61, 0.56, 0.5, 0.45],
+  22: [1.07, 1.1, 1.12, 1.14, 1.16, 1.17, 1.19, 1.2, 1.21, 1.22, 1.22, 1.22, 1.22, 1.22, 1.22, 1.21, 1.21, 1.2, 1.18, 1.17, 1.15, 1.14, 1.12, 1.09, 1.07, 1.04, 1.01, 0.98, 0.95, 0.91, 0.88, 0.84, 0.79, 0.75, 0.71, 0.66, 0.61, 0.55, 0.5, 0.44],
+  23: [1.07, 1.09, 1.12, 1.14, 1.15, 1.17, 1.18, 1.2, 1.2, 1.21, 1.22, 1.22, 1.22, 1.22, 1.22, 1.21, 1.21, 1.2, 1.19, 1.18, 1.17, 1.15, 1.13, 1.11, 1.09, 1.06, 1.04, 1.01, 0.98, 0.94, 0.91, 0.87, 0.83, 0.79, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.44],
+  24: [1.07, 1.09, 1.11, 1.13, 1.15, 1.17, 1.18, 1.2, 1.21, 1.21, 1.22, 1.22, 1.22, 1.21, 1.21, 1.21, 1.2, 1.19, 1.18, 1.16, 1.15, 1.13, 1.11, 1.08, 1.06, 1.03, 1.0, 0.97, 0.94, 0.91, 0.87, 0.83, 0.79, 0.74, 0.7, 0.65, 0.6, 0.55, 0.49, 0.44],
+  25: [1.06, 1.09, 1.11, 1.13, 1.15, 1.16, 1.18, 1.19, 1.2, 1.21, 1.21, 1.21, 1.21, 1.21, 1.2, 1.2, 1.19, 1.18, 1.17, 1.15, 1.14, 1.12, 1.1, 1.08, 1.05, 1.03, 1.0, 0.97, 0.9, 0.86, 0.82, 0.78, 0.74, 0.69, 0.64, 0.59, 0.54, 0.49, 0.43],
+  26: [1.06, 1.08, 1.1, 1.12, 1.14, 1.16, 1.17, 1.18, 1.19, 1.2, 1.2, 1.21, 1.21, 1.21, 1.2, 1.2, 1.19, 1.18, 1.17, 1.15, 1.14, 1.12, 1.1, 1.08, 1.05, 1.03, 1.0, 0.97, 0.93, 0.9, 0.86, 0.82, 0.78, 0.73, 0.69, 0.64, 0.59, 0.54, 0.48, 0.43],
+  27: [1.05, 1.08, 1.1, 1.12, 1.14, 1.15, 1.17, 1.18, 1.19, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.19, 1.19, 1.18, 1.16, 1.15, 1.13, 1.12, 1.1, 1.07, 1.05, 1.02, 0.99, 0.96, 0.93, 0.89, 0.86, 0.82, 0.77, 0.73, 0.68, 0.64, 0.59, 0.53, 0.48, 0.42],
+  28: [1.05, 1.07, 1.1, 1.12, 1.13, 1.15, 1.16, 1.17, 1.18, 1.19, 1.2, 1.2, 1.2, 1.2, 1.2, 1.19, 1.18, 1.17, 1.16, 1.15, 1.13, 1.11, 1.09, 1.07, 1.04, 1.02, 0.99, 0.96, 0.92, 0.89, 0.85, 0.81, 0.77, 0.73, 0.68, 0.63, 0.58, 0.53, 0.48, 0.42],
+  29: [1.05, 1.07, 1.09, 1.11, 1.13, 1.15, 1.16, 1.17, 1.18, 1.19, 1.19, 1.2, 1.2, 1.19, 1.19, 1.19, 1.18, 1.17, 1.16, 1.14, 1.13, 1.11, 1.09, 1.06, 1.04, 1.01, 0.98, 0.95, 0.92, 0.89, 0.85, 0.81, 0.77, 0.72, 0.68, 0.63, 0.58, 0.53, 0.47, 0.42],
+  30: [1.04, 1.07, 1.09, 1.11, 1.13, 1.14, 1.16, 1.17, 1.18, 1.18, 1.19, 1.19, 1.19, 1.19, 1.19, 1.18, 1.17, 1.16, 1.15, 1.14, 1.12, 1.1, 1.08, 1.06, 1.04, 1.01, 0.98, 0.95, 0.92, 0.88, 0.84, 0.8, 0.76, 0.72, 0.67, 0.62, 0.57, 0.52, 0.47, 0.41],
+  31: [1.04, 1.06, 1.08, 1.1, 1.12, 1.13, 1.15, 1.16, 1.17, 1.18, 1.18, 1.19, 1.19, 1.19, 1.19, 1.18, 1.17, 1.16, 1.15, 1.13, 1.1, 1.08, 1.06, 1.03, 1.01, 0.98, 0.95, 0.88, 0.84, 0.8, 0.76, 0.71, 0.67, 0.62, 0.57, 0.52, 0.46, 0.41],
+  32: [1.03, 1.06, 1.08, 1.1, 1.12, 1.13, 1.15, 1.16, 1.17, 1.18, 1.18, 1.18, 1.18, 1.18, 1.18, 1.17, 1.17, 1.16, 1.14, 1.13, 1.11, 1.1, 1.08, 1.05, 1.03, 1.0, 0.97, 0.94, 0.91, 0.87, 0.84, 0.8, 0.75, 0.71, 0.66, 0.62, 0.57, 0.51, 0.46, 0.4],
+  33: [1.03, 1.05, 1.08, 1.1, 1.11, 1.13, 1.14, 1.15, 1.16, 1.17, 1.18, 1.18, 1.18, 1.18, 1.18, 1.17, 1.16, 1.15, 1.14, 1.13, 1.11, 1.09, 1.07, 1.05, 1.02, 1.0, 0.97, 0.94, 0.9, 0.87, 0.83, 0.79, 0.75, 0.71, 0.66, 0.61, 0.56, 0.51, 0.46, 0.4],
+  34: [1.03, 1.05, 1.07, 1.09, 1.11, 1.13, 1.14, 1.15, 1.16, 1.17, 1.17, 1.17, 1.17, 1.17, 1.17, 1.17, 1.16, 1.15, 1.12, 1.11, 1.09, 1.07, 1.04, 1.02, 0.99, 0.96, 0.93, 0.9, 0.86, 0.83, 0.79, 0.75, 0.7, 0.66, 0.61, 0.56, 0.51, 0.45, 0.4],
+  35: [1.02, 1.05, 1.07, 1.09, 1.11, 1.12, 1.14, 1.15, 1.16, 1.16, 1.17, 1.17, 1.17, 1.17, 1.16, 1.16, 1.15, 1.14, 1.13, 1.12, 1.1, 1.08, 1.06, 1.04, 1.02, 0.99, 0.96, 0.93, 0.9, 0.86, 0.82, 0.78, 0.74, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.39],
+  36: [1.02, 1.04, 1.06, 1.08, 1.1, 1.12, 1.13, 1.14, 1.15, 1.16, 1.16, 1.17, 1.17, 1.16, 1.16, 1.16, 1.15, 1.14, 1.13, 1.12, 1.11, 1.08, 1.06, 1.04, 1.01, 0.98, 0.96, 0.93, 0.89, 0.86, 0.82, 0.78, 0.74, 0.69, 0.65, 0.6, 0.55, 0.5, 0.44, 0.39],
+};
+const EXP_NO_TEST_TBL = {
+  17: [1.02, 1.02, 1.03, 1.03, 1.03, 1.02, 1.02, 1.02, 1.01, 1.0, 0.99, 0.98, 0.97, 0.96, 0.94, 0.93, 0.91, 0.89, 0.87, 0.85, 0.83, 0.81, 0.78, 0.76, 0.73, 0.7, 0.67, 0.64, 0.6, 0.57, 0.53, 0.5, 0.46, 0.42, 0.38, 0.34, 0.29, 0.25, 0.2, 0.15],
+  18: [1.02, 1.03, 1.03, 1.03, 1.03, 1.03, 1.02, 1.02, 1.01, 1.01, 1.0, 0.99, 0.98, 0.96, 0.95, 0.93, 0.92, 0.9, 0.88, 0.86, 0.84, 0.81, 0.79, 0.76, 0.73, 0.7, 0.67, 0.64, 0.61, 0.57, 0.54, 0.5, 0.46, 0.42, 0.38, 0.34, 0.3, 0.25, 0.2, 0.16],
+  19: [1.03, 1.03, 1.03, 1.03, 1.03, 1.03, 1.03, 1.02, 1.02, 1.01, 1.0, 0.99, 0.98, 0.97, 0.95, 0.94, 0.92, 0.9, 0.88, 0.86, 0.84, 0.82, 0.79, 0.76, 0.74, 0.71, 0.68, 0.65, 0.61, 0.58, 0.54, 0.51, 0.47, 0.43, 0.39, 0.34, 0.3, 0.25, 0.21, 0.16],
+  20: [1.03, 1.04, 1.04, 1.04, 1.04, 1.04, 1.03, 1.03, 1.02, 1.01, 1.0, 0.99, 0.98, 0.97, 0.96, 0.94, 0.92, 0.91, 0.89, 0.87, 0.84, 0.82, 0.79, 0.77, 0.74, 0.71, 0.68, 0.65, 0.62, 0.58, 0.55, 0.51, 0.47, 0.43, 0.39, 0.35, 0.3, 0.26, 0.21, 0.16],
+  21: [1.04, 1.04, 1.04, 1.04, 1.04, 1.04, 1.04, 1.03, 1.03, 1.02, 1.01, 1.0, 0.99, 0.97, 0.96, 0.94, 0.93, 0.91, 0.89, 0.87, 0.85, 0.82, 0.8, 0.77, 0.74, 0.72, 0.69, 0.65, 0.62, 0.59, 0.55, 0.51, 0.47, 0.43, 0.39, 0.35, 0.31, 0.26, 0.22, 0.17],
+  22: [1.04, 1.04, 1.05, 1.05, 1.05, 1.04, 1.04, 1.03, 1.03, 1.02, 1.01, 1.0, 0.99, 0.98, 0.96, 0.95, 0.93, 0.91, 0.89, 0.87, 0.85, 0.83, 0.8, 0.78, 0.75, 0.72, 0.69, 0.66, 0.62, 0.59, 0.55, 0.52, 0.48, 0.44, 0.4, 0.35, 0.31, 0.27, 0.22, 0.17],
+  23: [1.04, 1.05, 1.05, 1.05, 1.05, 1.04, 1.04, 1.04, 1.03, 1.03, 1.02, 1.01, 0.99, 0.98, 0.97, 0.95, 0.94, 0.92, 0.9, 0.88, 0.85, 0.83, 0.81, 0.78, 0.75, 0.72, 0.69, 0.66, 0.63, 0.59, 0.56, 0.52, 0.48, 0.44, 0.4, 0.36, 0.31, 0.27, 0.22, 0.18],
+  24: [1.05, 1.05, 1.05, 1.05, 1.05, 1.05, 1.04, 1.04, 1.03, 1.02, 1.01, 1.0, 0.99, 0.97, 0.96, 0.94, 0.92, 0.91, 0.88, 0.86, 0.83, 0.81, 0.78, 0.76, 0.73, 0.7, 0.66, 0.63, 0.6, 0.56, 0.52, 0.49, 0.45, 0.41, 0.36, 0.32, 0.27, 0.23, 0.18],
+  25: [1.05, 1.05, 1.06, 1.06, 1.06, 1.05, 1.05, 1.04, 1.03, 1.02, 1.01, 1.0, 0.99, 0.97, 0.96, 0.94, 0.93, 0.91, 0.88, 0.86, 0.84, 0.81, 0.79, 0.76, 0.73, 0.7, 0.67, 0.64, 0.6, 0.57, 0.53, 0.49, 0.45, 0.41, 0.37, 0.32, 0.28, 0.23, 0.18],
+  26: [1.06, 1.06, 1.06, 1.06, 1.06, 1.06, 1.05, 1.04, 1.04, 1.03, 1.02, 1.01, 1.0, 0.99, 0.98, 0.96, 0.95, 0.93, 0.91, 0.89, 0.87, 0.84, 0.82, 0.79, 0.76, 0.73, 0.7, 0.67, 0.64, 0.61, 0.57, 0.53, 0.49, 0.45, 0.41, 0.37, 0.33, 0.28, 0.23, 0.18],
+  27: [1.06, 1.06, 1.06, 1.06, 1.06, 1.06, 1.06, 1.05, 1.04, 1.03, 1.02, 1.01, 1.0, 0.98, 0.97, 0.95, 0.93, 0.91, 0.89, 0.87, 0.85, 0.82, 0.8, 0.77, 0.74, 0.71, 0.68, 0.64, 0.61, 0.57, 0.54, 0.5, 0.46, 0.42, 0.37, 0.33, 0.29, 0.24, 0.19],
+  28: [1.06, 1.07, 1.07, 1.07, 1.07, 1.07, 1.06, 1.06, 1.05, 1.04, 1.04, 1.03, 1.01, 1.0, 0.99, 0.97, 0.95, 0.94, 0.92, 0.9, 0.87, 0.85, 0.83, 0.8, 0.77, 0.74, 0.71, 0.68, 0.65, 0.61, 0.58, 0.54, 0.5, 0.46, 0.42, 0.38, 0.33, 0.29, 0.24, 0.19],
+  29: [1.07, 1.07, 1.07, 1.07, 1.07, 1.07, 1.07, 1.06, 1.06, 1.05, 1.04, 1.03, 1.02, 1.01, 0.99, 0.98, 0.96, 0.94, 0.92, 0.9, 0.88, 0.85, 0.83, 0.8, 0.78, 0.75, 0.72, 0.68, 0.65, 0.62, 0.58, 0.54, 0.51, 0.47, 0.42, 0.38, 0.34, 0.29, 0.25, 0.2],
+  30: [1.07, 1.07, 1.08, 1.08, 1.08, 1.07, 1.07, 1.07, 1.06, 1.05, 1.04, 1.03, 1.02, 1.01, 0.99, 0.98, 0.96, 0.94, 0.92, 0.9, 0.88, 0.86, 0.83, 0.81, 0.78, 0.75, 0.72, 0.69, 0.65, 0.62, 0.58, 0.55, 0.51, 0.47, 0.43, 0.39, 0.34, 0.3, 0.25, 0.2],
+  31: [1.07, 1.08, 1.08, 1.08, 1.08, 1.08, 1.07, 1.07, 1.06, 1.06, 1.05, 1.04, 1.03, 1.01, 1.0, 0.98, 0.97, 0.95, 0.93, 0.91, 0.89, 0.86, 0.84, 0.81, 0.78, 0.75, 0.72, 0.69, 0.66, 0.62, 0.59, 0.55, 0.51, 0.47, 0.43, 0.39, 0.35, 0.3, 0.25, 0.21],
+  32: [1.08, 1.08, 1.08, 1.08, 1.08, 1.08, 1.08, 1.07, 1.07, 1.06, 1.05, 1.04, 1.03, 1.02, 1.0, 0.99, 0.97, 0.95, 0.93, 0.91, 0.89, 0.87, 0.84, 0.81, 0.79, 0.76, 0.73, 0.7, 0.66, 0.63, 0.56, 0.52, 0.48, 0.44, 0.39, 0.35, 0.3, 0.26, 0.21],
+  33: [1.08, 1.09, 1.09, 1.09, 1.09, 1.09, 1.08, 1.08, 1.07, 1.06, 1.05, 1.04, 1.03, 1.02, 1.01, 0.99, 0.97, 0.96, 0.94, 0.92, 0.89, 0.87, 0.84, 0.82, 0.79, 0.76, 0.73, 0.7, 0.67, 0.63, 0.6, 0.56, 0.52, 0.48, 0.44, 0.4, 0.35, 0.31, 0.26, 0.21],
+  34: [1.09, 1.09, 1.09, 1.09, 1.09, 1.09, 1.08, 1.08, 1.07, 1.07, 1.06, 1.05, 1.04, 1.02, 1.01, 0.99, 0.98, 0.96, 0.94, 0.92, 0.9, 0.87, 0.85, 0.82, 0.79, 0.77, 0.73, 0.7, 0.67, 0.64, 0.6, 0.56, 0.52, 0.48, 0.44, 0.4, 0.36, 0.31, 0.27, 0.22],
+  35: [1.09, 1.09, 1.1, 1.09, 1.09, 1.09, 1.08, 1.08, 1.07, 1.07, 1.06, 1.05, 1.04, 1.03, 1.01, 1.0, 0.98, 0.96, 0.94, 0.92, 0.9, 0.88, 0.85, 0.83, 0.8, 0.77, 0.74, 0.71, 0.67, 0.64, 0.6, 0.57, 0.53, 0.49, 0.45, 0.4, 0.36, 0.32, 0.27, 0.22],
+  36: [1.09, 1.1, 1.1, 1.1, 1.1, 1.09, 1.09, 1.08, 1.08, 1.07, 1.06, 1.05, 1.04, 1.02, 1.0, 0.99, 0.97, 0.95, 0.93, 0.91, 0.88, 0.86, 0.83, 0.8, 0.77, 0.74, 0.71, 0.64, 0.61, 0.57, 0.53, 0.49, 0.45, 0.41, 0.37, 0.32, 0.27, 0.22],
+};
+
+function expGain(exp, age, withTest) {
+  const clampedAge = Math.max(17, Math.min(36, Math.round(age || 27)));
+  const tbl = withTest ? EXP_WITH_TEST_TBL : EXP_NO_TEST_TBL;
+  const row = tbl[clampedAge];
+  if (!row) return 0;
+
+  // Find surrounding columns and interpolate
+  const cols = EXP_COLS;
+  const clampedExp = Math.max(cols[0], Math.min(cols[cols.length-1], exp));
+
+  // Find index bracket
+  let lo = 0;
+  for (let i = 0; i < cols.length - 1; i++) {
+    if (clampedExp >= cols[i] && clampedExp <= cols[i+1]) { lo = i; break; }
+    if (clampedExp > cols[cols.length-1]) { lo = cols.length - 2; break; }
+  }
+  const hi = Math.min(lo + 1, cols.length - 1);
+  const loVal = row[lo] ?? row[row.length-1];
+  const hiVal = row[hi] ?? row[row.length-1];
+  const t = cols[lo] === cols[hi] ? 0 : (clampedExp - cols[lo]) / (cols[hi] - cols[lo]);
+  const multiplier = loVal + t * (hiVal - loVal);
+
+  // absolute gain — value from table is added directly to EXP
+  return multiplier;
+}
+function staGain(sta, laps) {
+  let gain;
+  if      (sta >= 146) gain = 0.50;
+  else if (sta >= 140) gain = 0.56;
+  else if (sta >= 134) gain = 0.63;
+  else if (sta >= 128) gain = 0.70;
+  else if (sta >= 122) gain = 0.77;
+  else if (sta >= 116) gain = 0.84;
+  else if (sta >= 110) gain = 0.91;
+  else if (sta >= 104) gain = 0.98;
+  else if (sta >= 98)  gain = 1.05;
+  else if (sta >= 92)  gain = 1.12;
+  else if (sta >= 86)  gain = 1.19;
+  else if (sta >= 80)  gain = 1.26;
+  else if (sta >= 74)  gain = 1.33;
+  else if (sta >= 68)  gain = 1.40;
+  else if (sta >= 62)  gain = 1.47;
+  else if (sta >= 56)  gain = 1.54;
+  else if (sta >= 50)  gain = 1.61;
+  else if (sta >= 44)  gain = 1.68;
+  else if (sta >= 38)  gain = 1.75;
+  else if (sta >= 32)  gain = 1.82;
+  else if (sta >= 26)  gain = 1.89;
+  else if (sta >= 20)  gain = 1.96;
+  else if (sta >= 14)  gain = 2.03;
+  else if (sta >= 8)   gain = 2.10;
+  else                 gain = 2.17;
+  return gain * (laps / 100);
+}
+function calcOA(s, includeMot=true) {
+  const c=Math.min(s.CONC,250),t=Math.min(s.TAL,250),a=Math.min(s.AGR,250),
+        e=Math.min(s.EXP,250),ti=Math.min(s.TI,250),st=Math.min(s.STA,250),ch=Math.min(s.CHA,250);
+  const base = (c*0.17+t*0.17+a*0.15+e*0.13+ti*0.13+st*0.13+ch*0.12)*(1-(Math.max(s.KG,50)-50)*0.003);
+  const motBonus = includeMot ? (s.MOT||0)/12 : 0;
+  return Math.max(0, base + motBonus);
+}
+
+// ── END-OF-SEASON RESET ──
+// Returns the stat changes applied at end of season given state s and age NEXT season
+function eosReset(s, ageNext) {
+  const concGain = ageNext <= 25 ? (31 - ageNext) : (30 - ageNext);
+  const kgDelta = s.KG >= 100 ? 1 : s.KG >= 90 ? 2 : s.KG >= 80 ? 3 :
+                  s.KG >= 70  ? 4 : s.KG >= 60  ? 5 : s.KG >= 50 ? 9 : 13;
+  const tiSeasonGain = {17:17,18:17,19:17,20:17,21:16,22:15,23:14,24:13,25:12,26:11,27:10,28:9,29:8,30:7,31:5,32:4,33:3,34:1,35:0};
+  const tiGainEOS = tiSeasonGain[ageNext] ?? 0;
+
+  return {
+    CONC: concGain,
+    AGR:  -5,
+    STA:  -7,
+    MOT:  -18,
+    TI:   tiGainEOS,
+    KG:   kgDelta,
+    AGE:  1,
+  };
+}
+
+// ── STATE ──
+let rows = [];
+let seasonNames = {};
+let seasonAge = {}; // age at start of each season
+let eosData = {}; // end-of-season deltas, keyed by season number
+
+function emptyRow(season, race) {
+  const isR1 = race === 1;
+  return { season, race, training:'Fitness', test:true, laps:100, pos:null,
+    trainingSet:isR1, testSet:isR1, lapsSet:isR1, posSet:false,
+    overrides:{}, after:{}, oa:0, delta:0, agrDelta:0 };
+}
+
+// Get R01 of a season (index of first row)
+function seasonR01(sn) { return rows.findIndex(r => r.season === sn && r.race === 1); }
+
+window.onload = () => {
+  for (let s=1; s<=3; s++) {
+    seasonNames[s] = `Season ${s}`;
+    for (let r=1; r<=RPB; r++) rows.push(emptyRow(s,r));
+  }
+  recalc();
+};
+
+// ── PROPAGATION: R01 → rest of season ──
+// When R01's training, test, laps, or pos changes, apply to all rows in season
+// UNLESS the individual row has been explicitly overridden (we track per-row "locked" fields)
+// We use a simple approach: each row has a `lockedFields` set for training/test/laps/pos
+// If not locked, inherit from R01 on recalc.
+
+function propagateCascade() {
+  const fields = ['training','test','laps','pos'];
+  const setKey = { training:'trainingSet', test:'testSet', laps:'lapsSet', pos:'posSet' };
+  for (const field of fields) {
+    let lastVal = rows.length ? rows[0][field] : undefined;
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][setKey[field]]) {
+        lastVal = rows[i][field];
+      } else {
+        if (field === 'pos' && rows[i].season !== rows[i-1].season) {
+          rows[i][field] = null;
+        } else {
+          rows[i][field] = lastVal;
+        }
+      }
+    }
+  }
+}
+
+// ── RECALC ──
+function recalc() {
+  propagateCascade();
+
+  // Rebuild seasonAge from row overrides (AGE field on R01) or carry forward
+  {
+    const seasons = [...new Set(rows.map(r => r.season))];
+    let runningAge = 27;
+    for (const sn of seasons) {
+      const r01 = rows.find(r => r.season === sn && r.race === 1);
+      if (r01 && r01.overrides.AGE !== undefined) runningAge = r01.overrides.AGE;
+      seasonAge[sn] = runningAge;
+      runningAge += 1; // next season is +1
+    }
+  }
+
+  // s = state BEFORE R01 (pure starting values, set via stat-cell overrides on R01)
+  // We store starting values separately so R01 overrides act as "pre-race inputs"
+  let startVals = {
+    CONC: rows[0]?.overrides.CONC ?? 0, TAL: rows[0]?.overrides.TAL ?? 0,
+    AGR:  rows[0]?.overrides.AGR  ?? 0, EXP: rows[0]?.overrides.EXP ?? 0,
+    TI:   rows[0]?.overrides.TI   ?? 0, STA: rows[0]?.overrides.STA ?? 0,
+    CHA:  rows[0]?.overrides.CHA  ?? 0, MOT: rows[0]?.overrides.MOT ?? 0,
+    KG:   rows[0]?.overrides.KG  ?? 70,
+  };
+  let s = {...startVals};
+  let prevOA = calcOA(s);
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+
+    // At start of a new season (except first), apply EOS reset from previous season
+    if (row.race === 1 && i > 0) {
+      const prevSeason = rows[i-1].season;
+      const age = seasonAge[prevSeason] || 27;
+      const ageNext = age + 1;
+      const delta = eosReset(s, ageNext);
+      s.CONC = Math.max(0, Math.min(250, s.CONC + delta.CONC));
+      s.AGR  = Math.max(0, s.AGR  + delta.AGR);
+      s.STA  = Math.max(0, Math.min(250, s.STA  + delta.STA));
+      s.MOT  = Math.max(0, Math.min(250, s.MOT  + delta.MOT));
+      s.TI   = Math.max(0, Math.min(250, s.TI   + (delta.TI||0)));
+      s.KG   = Math.max(0, s.KG   + delta.KG);
+    }
+
+    // If this row has stat overrides AND it's not R01 (R01 overrides are the starting values),
+    // apply them after calculation as hard locks
+    const locked = {};
+    if (i > 0) {
+      STATS.forEach(k => { if (row.overrides[k] !== undefined) locked[k] = row.overrides[k]; });
+    }
+
+    const age = seasonAge[row.season] || 27;
+    const fx = applyTrainingFX(row.training, s, age);
+    s.CONC = Math.max(0, Math.min(250, s.CONC + fx.CONC));
+    s.AGR  = Math.max(0, s.AGR  + fx.AGR);
+    s.STA  = Math.max(0, Math.min(250, s.STA  + fx.STA));
+    s.CHA  = Math.max(0, Math.min(250, s.CHA  + fx.CHA + CHA_PER_RACE));
+    s.MOT  = Math.max(0, Math.min(250, s.MOT + fx.MOT));
+    s.KG   = Math.max(0, s.KG  + fx.KG);
+    // Technical gives +1 EXP bonus on top of race EXP
+    if (fx.EXP_BONUS) s.EXP = Math.min(300, s.EXP + fx.EXP_BONUS);
+
+    let agrDelta = 0;
+    if (row.pos !== null) {
+      agrDelta = agrFromPos(row.pos, s.EXP);
+      s.AGR = Math.max(0, s.AGR + agrDelta);
+    }
+    row.agrDelta = agrDelta;
+
+    if (row.test) {
+      s.TI  = Math.min(250, s.TI  + tiGain(s.TI, age, row.test));
+      s.STA = Math.min(250, s.STA + staGain(s.STA, row.laps));
+    }
+    s.EXP = Math.min(300, s.EXP + expGain(s.EXP, age, row.test));
+
+    // Apply hard overrides (post-race real values entered manually)
+    STATS.forEach(k => { if (locked[k] !== undefined) s[k] = locked[k]; });
+
+    row.after  = {...s};
+    row.oa     = calcOA(s, true);
+    row.boa    = calcOA(s, false);
+    row.delta  = i === 0 ? 0 : row.oa - prevOA;
+    prevOA     = row.oa;
+  }
+
+  // Build EOS summaries between seasons
+  const seasons = [...new Set(rows.map(r => r.season))];
+  eosData = {};
+  for (let si = 0; si < seasons.length - 1; si++) {
+    const sn = seasons[si];
+    const lastRow = [...rows].reverse().find(r => r.season === sn);
+    if (!lastRow) continue;
+    const afterLast = lastRow.after;
+    const age = seasonAge[sn] || 27;
+    const ageNext = age + 1;
+    const delta = eosReset(afterLast, ageNext);
+    eosData[sn] = { before: afterLast, delta, ageNext };
+  }
+
+  renderTable();
+  updateTopBar();
+}
+
+// ── RENDER ──
+function renderTable() {
+  const tbody = document.getElementById('plan-body');
+  let html = '';
+  let curSeason = 0;
+  let prevAfter = null;
+
+  rows.forEach((row, i) => {
+    const isR01 = row.race === 1;
+
+    // EOS row before new season header (except first season)
+    if (row.season !== curSeason && curSeason > 0 && eosData[curSeason]) {
+      const eos = eosData[curSeason];
+      const d = eos.delta;
+      const b = eos.before;
+      const fmtD = (val, stat) => {
+        if (val === 0) return `<span class="eos-delta nc">—</span>`;
+        const upGood = STAT_UP_GOOD[stat];
+        const isGood = upGood ? val > 0 : val < 0;
+        const cls = isGood ? 'pos' : 'neg';
+        return `<span class="eos-delta ${cls}">${val>0?'+':''}${val}</span>`;
+      };
+      html += `<tr class="eos-row">
+        <td><span class="eos-label">EOS</span></td>
+        <td colspan="4" style="color:var(--purple);font-size:10px">End of Season Reset · Age → ${eos.ageNext}</td>
+        <td></td>
+        <td style="color:var(--border2)">—</td>
+        <td style="color:var(--border2)">—</td>
+        <td>${fmtD(d.CONC,'CONC')}</td>
+        <td style="color:var(--border2)">—</td>
+        <td>${fmtD(d.AGR,'AGR')}</td>
+        <td style="color:var(--border2)">—</td>
+        <td>${fmtD(d.TI||0,'TI')}</td>
+        <td>${fmtD(d.STA,'STA')}</td>
+        <td style="color:var(--border2)">—</td>
+        <td>${fmtD(d.MOT||d.MOT===0?d.MOT:-18,'MOT')}</td>
+        <td>${fmtD(d.KG,'KG')}</td>
+        <td style="color:var(--border2)">—</td>
+        <td style="color:var(--border2)">—</td>
+      </tr>`;
+    }
+
+    // Season header row (editable name + bulk controls)
+    if (row.season !== curSeason) {
+      curSeason = row.season;
+      const sn = curSeason;
+      const name = (seasonNames[sn] || `Season ${sn}`).replace(/"/g,'&quot;');
+      const srows = rows.filter(r => r.season === sn);
+      const allTest = srows.every(r => r.test);
+
+      // Find which training R01 has for the season buttons
+      const r01 = rows.find(r => r.season === sn && r.race === 1);
+      const curT = r01 ? r01.training[0] : 'F'; // first letter
+
+      html += `<tr class="s-head">
+        <td colspan="19">
+          <div class="s-head-inner">
+            <input class="s-head-name" type="text" value="${name}"
+              onchange="renameSeason(${sn},this.value)"
+              onblur="renameSeason(${sn},this.value)"
+              onclick="this.select()"
+              title="Click to rename season">
+            <div class="s-head-age-wrap">
+              <span class="s-head-age-label">Age</span>
+              <input class="s-head-age-in" type="number" min="16" max="60"
+                value="${seasonAge[sn] || 27}"
+                title="Driver age at start of this season"
+                onchange="setSeasonAge(${sn}, +this.value)"
+                onblur="setSeasonAge(${sn}, +this.value)">
+            </div>
+            <div class="s-head-trainings">
+              <span class="s-head-label">Set all:</span>
+              ${LETTERS.map(L => {
+                const tname = T_LETTER[L];
+                const isAct = r01 && r01.training === tname;
+                const lClass2 = L === '—' ? 'dash' : L;
+          const isAct2 = r01 && r01.training === tname;
+          return `<button class="tb ${lClass2}${isAct2?' act':''}" title="${tname||'No training'}" onclick="setSeasonTraining(${sn},'${tname}')" style="${useEmoji?'font-size:13px;width:26px;height:26px':''}}">${useEmoji ? T_EMOJI[L] : L}</button>`;
+              }).join('')}
+            </div>
+            <div class="s-head-test">
+              <button class="test-all-btn ${allTest?'active':''}" onclick="toggleSeasonTest(${sn})">
+                <div class="mini-box"></div> Test all
+              </button>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+    }
+
+    const a = row.after;
+    const hasOv = STATS.some(k => row.overrides[k] !== undefined);
+
+    // Stat cells
+    const statCells = STATS.map(k => {
+      const v = a[k];
+      const isOv = row.overrides[k] !== undefined;
+      let cls = 'nc';
+      if (!isOv && prevAfter) {
+        const d = v - (prevAfter[k]||0);
+        if (Math.abs(d) > 0.005) {
+          const upGood = STAT_UP_GOOD[k];
+          cls = (d > 0) ? (upGood ? 'up' : 'down') : (upGood ? 'down' : 'up');
+        }
+      }
+      if (isOv) cls = 'ov';
+      const dec = (k==='EXP'||k==='TI'||k==='STA'||k==='CHA') ? 1 : 0;
+      return `<td class="stat-cell" onclick="startEdit(${i},'${k}',this)">
+        <span class="stat-val ${cls}">${(v||0).toFixed(dec)}</span>
+      </td>`;
+    }).join('');
+
+    // AGR badge
+    let agrBadge = `<span style="color:var(--border2);font-size:10px">—</span>`;
+    if (row.pos !== null) {
+      const d = row.agrDelta;
+      const bc = d > 0 ? 'pos' : d < 0 ? 'neg' : 'zero';
+      agrBadge = `<span class="agr-badge ${bc}">${d>=0?'+':''}${d}</span>`;
+    }
+
+    const dc = row.delta > 0.005 ? 'up' : row.delta < -0.005 ? 'down' : 'nc';
+    const ds = row.delta > 0 ? '+' : '';
+    const posOpts = `<option value="">—</option>${Array.from({length:40},(_,j)=>`<option value="${j+1}" ${row.pos===j+1?'selected':''}>${j+1}</option>`).join('')}`;
+
+    // Row training buttons
+    const rowBtns = LETTERS.map(L => {
+      const tname = T_LETTER[L];
+      const isAct = row.training === tname;
+      const lClass = L === '—' ? 'dash' : L;
+      return `<button class="rtb ${lClass}${isAct?' act':''}" title="${tname||'No training'}" onclick="setRowTraining(${i},'${tname}')" style="${useEmoji?'font-size:12px;width:24px;height:24px':''}}">${useEmoji ? T_EMOJI[L] : L}</button>`;
+    }).join('');
+
+    html += `<tr class="${hasOv?'overridden':''}${isR01?' is-r01':''}">
+      <td style="font-family:var(--mono);font-size:10px;color:${isR01?'var(--accent)':'var(--muted)'};font-weight:${isR01?'700':'400'}">R${row.race < 10 ? '0'+row.race : row.race}</td>
+      <td><div class="row-tb">${rowBtns}</div></td>
+      <td>
+        <label class="test-toggle">
+          <input type="checkbox" ${row.test?'checked':''} onchange="setRowTest(${i},this.checked)">
+          <div class="test-box"></div>
+        </label>
+      </td>
+      <td>${row.test?`<input class="laps-in" type="number" value="${row.laps}" min="0" max="200" onchange="setRowLaps(${i},+this.value)">`:`<span style="color:var(--border2)">—</span>`}</td>
+      <td><select class="pos-sel" onchange="setRowPos(${i},this.value===''?null:+this.value)">${posOpts}</select></td>
+      <td>${agrBadge}</td>
+      <td class="oa-cell">${row.oa.toFixed(2)}</td>
+      <td class="oa-cell" style="color:var(--muted);font-size:11px">${row.boa.toFixed(2)}</td>
+      ${statCells}
+      <td class="stat-cell" onclick="startEdit(${i},'SALARY',this)">
+        <span class="stat-val nc" style="font-size:10px">${row.overrides.SALARY!==undefined ? '$'+Number(row.overrides.SALARY).toLocaleString() : '<span style=\"color:var(--border2)\">—</span>'}</span>
+      </td>
+      <td style="white-space:nowrap;padding:2px 5px;vertical-align:middle"><div style="display:flex;align-items:center;gap:3px">
+        ${(()=>{
+          const c = row.overrides.CONTRACT;
+          const cStr = c !== undefined
+            ? `<span class="stat-val ${c<=5?'down':'nc'}" style="cursor:pointer;display:inline;font-family:var(--mono);font-size:11px" onclick="startEdit(${i},'CONTRACT',this.closest('td'))">${c}</span>`
+            : `<span style="color:var(--border2);font-size:10px;cursor:pointer;display:inline" onclick="startEdit(${i},'CONTRACT',this.closest('td'))">—</span>`;
+          const renewBtn = `<span class="renew-btn" onclick="openRenewMenu(event,${i})" title="Extend contract" style="margin-left:3px;vertical-align:middle">＋</span>`;
+          return cStr + renewBtn;
+        })()}
+      </td>
+      <td class="delta-cell ${dc}">${i===0?'—':ds+row.delta.toFixed(2)}</td>
+    </tr>`;
+
+    prevAfter = {...a};
+  });
+
+  html += `<tr class="add-row"><td colspan="19"><button class="btn btn-green" onclick="addSeason()" style="width:auto;padding:4px 14px">+ Add Season</button></td></tr>`;
+  tbody.innerHTML = html;
+}
+
+function updateTopBar() {
+  const n = rows.length;
+  document.getElementById('hp-races').textContent = n;
+  const startOA = n ? rows[0].oa : 0;
+  const endOA   = n ? rows[n-1].oa : 0;
+  const gain    = endOA - startOA;
+  document.getElementById('hp-start').textContent = startOA.toFixed(2);
+  document.getElementById('hp-end').textContent   = endOA.toFixed(2);
+  document.getElementById('hp-gain').textContent  = (gain>=0?'+':'')+gain.toFixed(2);
+}
+
+// ── SETTERS ──
+// Row-level: mark this row as explicitly set, then cascade forward
+function setRowTraining(i, val) {
+  rows[i].training = (rows[i].training === val) ? '' : val;
+  rows[i].trainingSet = true;
+  // clear Set flag on all rows after i in same season so they inherit
+  for (let j = i+1; j < rows.length; j++) {
+    if (rows[j].season !== rows[i].season) break;
+    if (rows[j].trainingSet) break; // stop at next explicit override
+    // don't clear — propagateCascade will handle it
+  }
+  recalc();
+}
+function setRowTest(i, val) {
+  rows[i].test = val; rows[i].testSet = true;
+  recalc();
+}
+function setRowLaps(i, val) {
+  rows[i].laps = val; rows[i].lapsSet = true;
+  recalc();
+}
+function setRowPos(i, val) {
+  rows[i].pos = val; rows[i].posSet = true;
+  recalc();
+}
+
+// Season-level: set all rows, clear all individual Set flags so cascade is clean
+function setSeasonTraining(sn, val) {
+  const r01 = rows.find(r => r.season === sn && r.race === 1);
+  const newVal = (r01 && r01.training === val) ? '' : val;
+  rows.filter(r => r.season === sn).forEach(r => { r.training = newVal; r.trainingSet = false; });
+  rows.find(r => r.season === sn && r.race === 1).trainingSet = true; // anchor on R01
+  recalc();
+}
+function toggleSeasonTest(sn) {
+  const srows = rows.filter(r => r.season === sn);
+  const allOn = srows.every(r => r.test);
+  srows.forEach(r => { r.test = !allOn; r.testSet = false; });
+  srows[0].testSet = true;
+  recalc();
+}
+
+function setSeasonAge(sn, val) {
+  if (!val || isNaN(val)) return;
+  seasonAge[sn] = val;
+  // Also store as override on R01 so it persists
+  const r01 = rows.find(r => r.season === sn && r.race === 1);
+  if (r01) r01.overrides.AGE = val;
+  recalc();
+}
+
+function renameSeason(sn, val) {
+  seasonNames[sn] = val.trim() || `Season ${sn}`;
+  renderTable(); updateTopBar();
+}
+
+function addSeason() {
+  const last = rows.length > 0 ? rows[rows.length-1].season : 0;
+  const sn = last + 1;
+  seasonNames[sn] = `Season ${sn}`;
+  for (let r=1; r<=RPB; r++) rows.push(emptyRow(sn, r));
+  recalc();
+}
+
+function resetAll() {
+  if (!confirm('Reset everything? All data will be lost.')) return;
+  rows = []; seasonNames = {};
+  for (let s=1; s<=3; s++) {
+    seasonNames[s] = `Season ${s}`;
+    for (let r=1; r<=RPB; r++) rows.push(emptyRow(s, r));
+  }
+  recalc();
+}
+
+// ── INLINE STAT EDITING ──
+let activeInput = null;
+function startEdit(i, k, td) {
+  // SALARY and CONTRACT: always open editor (never delete on click)
+  // Other stats: if already overridden, first click deletes override; otherwise opens editor
+  if (k !== 'SALARY' && k !== 'CONTRACT') {
+    if (rows[i].overrides[k] !== undefined) { delete rows[i].overrides[k]; recalc(); return; }
+  }
+  closeEdit();
+  const isExtra = (k==='SALARY'||k==='CONTRACT');
+  const v = isExtra ? (rows[i].overrides[k]||0) : (rows[i].after[k]||0);
+  const dec = (k==='EXP'||k==='TI'||k==='STA'||k==='CHA') ? 1 : 0;
+  const inp = document.createElement('input');
+  inp.type='number'; inp.className='stat-input'; inp.value=v.toFixed(dec); inp.step=dec>0?'0.1':'1';
+  td.style.position='relative'; td.appendChild(inp); inp.focus(); inp.select();
+  activeInput = {inp, i, k};
+  inp.addEventListener('keydown', e => { if(e.key==='Enter') commitEdit(); if(e.key==='Escape') closeEdit(); });
+  inp.addEventListener('blur', () => setTimeout(commitEdit, 150));
+}
+// ── CONTRACT & SALARY: clean cascade ──
+// CONTRACT: set value, count down to 0 across all subsequent rows (no stop at season boundary)
+// SALARY: active from anchor row for exactly CONTRACT races; new salary after renewal starts
+//         only when old contract expires
+
+function cascadeContract(fromIdx, value) {
+  const clamped = Math.min(34, Math.max(0, Math.round(value)));
+  rows[fromIdx].overrides.CONTRACT = clamped;
+  for (let j = fromIdx + 1; j < rows.length; j++) {
+    const remaining = clamped - (j - fromIdx);
+    if (remaining < 0) {
+      // Past end of contract — clear if it was auto-set
+      if (!rows[j]._contractAnchor) delete rows[j].overrides.CONTRACT;
+    } else {
+      if (!rows[j]._contractAnchor) rows[j].overrides.CONTRACT = remaining;
+      else break; // hit a manually set contract anchor, stop
+    }
+  }
+}
+
+function cascadeSalary(fromIdx, salary) {
+  // Find end of contract from fromIdx
+  const contractLen = rows[fromIdx].overrides.CONTRACT ?? 0;
+  // Clear previously auto-set salaries forward until next anchor
+  for (let j = fromIdx + 1; j < rows.length; j++) {
+    if (rows[j]._salaryAnchor) break;
+    delete rows[j].overrides.SALARY;
+  }
+  // Set salary for contract duration
+  for (let j = fromIdx + 1; j < rows.length && (j - fromIdx) < contractLen; j++) {
+    if (rows[j]._salaryAnchor) break;
+    rows[j].overrides.SALARY = salary;
+    rows[j]._salaryAnchor = false;
+  }
+}
+
+function commitEdit() {
+  if (!activeInput) return;
+  const {inp, i, k} = activeInput; activeInput = null;
+  const v = parseFloat(inp.value);
+  if (isNaN(v)) { recalc(); return; }
+
+  if (k === 'CONTRACT') {
+    rows[i]._contractAnchor = true;
+    cascadeContract(i, v);
+    // Re-apply salary cascade if salary exists on this row
+    if (rows[i].overrides.SALARY !== undefined) {
+      rows[i]._salaryAnchor = true;
+      cascadeSalary(i, rows[i].overrides.SALARY);
+    }
+  } else if (k === 'SALARY') {
+    rows[i].overrides.SALARY = v;
+    rows[i]._salaryAnchor = true;
+    cascadeSalary(i, v);
+  } else {
+    rows[i].overrides[k] = v;
+  }
+  recalc();
+}
+function closeEdit() {
+  if (!activeInput) return;
+  if (activeInput.inp.parentNode) activeInput.inp.parentNode.removeChild(activeInput.inp);
+  activeInput = null;
+}
+
+function toggleEmoji() {
+  useEmoji = !useEmoji;
+  document.getElementById('emoji-btn').textContent = useEmoji ? '🔤 Letters' : '🏋️ Icons';
+  recalc();
+}
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  document.getElementById('theme-btn').textContent = isLight ? '🌙 Dark' : '☀ Light';
+}
+function toggleLegend() { document.getElementById('legend').classList.toggle('open'); }
+
+// ── RENEW CONTRACT ──
+let renewPopup = null;
+
+function openRenewMenu(evt, rowIdx) {
+  evt.stopPropagation();
+  closeRenewMenu();
+
+  const row = rows[rowIdx];
+  const currentSalary = row.overrides.SALARY || 0;
+  const currentContract = row.overrides.CONTRACT || 0;
+  const options = [1, 2, 3, 5, 10, 13, 17];
+  const RENEW_MULT = { 1:1.250, 2:1.230, 3:1.210, 5:1.190, 10:1.160, 13:1.140, 17:1.120 };
+  const getMultiplier = (races) => RENEW_MULT[races] || 1.12;
+
+  const popup = document.createElement('div');
+  popup.className = 'renew-popup';
+  popup.innerHTML = `<div class="renew-popup-title">Extend Contract</div>` +
+    options.map(n => {
+      const mult = getMultiplier(n);
+      const newSalary = currentSalary ? Math.round(currentSalary * mult) : null;
+      const salaryStr = newSalary ? `$${Number(newSalary).toLocaleString()}` : '(set salary first)';
+      const salaryColor = newSalary ? 'var(--green)' : 'var(--muted)';
+      return `<div class="renew-option" onclick="applyRenew(${rowIdx},${n},${newSalary||'null'})">
+        <span class="ro-races">+${n} races</span>
+        <span>
+          <span class="ro-mult">×${mult.toFixed(3)} → </span>
+          <span class="ro-salary" style="color:${salaryColor}">${salaryStr}</span>
+        </span>
+      </div>`;
+    }).join('');
+
+  document.body.appendChild(popup);
+  renewPopup = popup;
+
+  // Position near the click
+  const x = Math.min(evt.clientX, window.innerWidth - 180);
+  const y = Math.min(evt.clientY + 8, window.innerHeight - 200);
+  popup.style.left = x + 'px';
+  popup.style.top  = y + 'px';
+
+  setTimeout(() => document.addEventListener('click', closeRenewMenu, {once:true}), 10);
+}
+
+function closeRenewMenu() {
+  if (renewPopup) { renewPopup.remove(); renewPopup = null; }
+}
+
+function applyRenew(rowIdx, addRaces, newSalary) {
+  const row = rows[rowIdx];
+  const currentContract = row.overrides.CONTRACT ?? 0;
+
+  // New total contract = current remaining + extension
+  const newTotal = Math.min(34, currentContract + addRaces);
+
+  // Cascade new contract values from this row
+  rows[rowIdx]._contractAnchor = true;
+  cascadeContract(rowIdx, newTotal);
+
+  // New salary starts AFTER old contract expires (i.e. at offset = currentContract)
+  if (newSalary !== null && currentContract > 0) {
+    const newSalaryStartIdx = rowIdx + currentContract;
+    if (newSalaryStartIdx < rows.length) {
+      rows[newSalaryStartIdx].overrides.SALARY = newSalary;
+      rows[newSalaryStartIdx]._salaryAnchor = true;
+      cascadeSalary(newSalaryStartIdx, newSalary);
+    }
+  } else if (newSalary !== null) {
+    // No current contract — new salary starts immediately
+    rows[rowIdx].overrides.SALARY = newSalary;
+    rows[rowIdx]._salaryAnchor = true;
+    cascadeSalary(rowIdx, newSalary);
+  }
+
+  closeRenewMenu();
+  recalc();
+}
+</script>
+</body>
+</html>
